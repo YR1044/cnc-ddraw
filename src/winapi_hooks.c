@@ -780,6 +780,14 @@ BOOL WINAPI fake_GetMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wM
 
 BOOL WINAPI fake_PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)
 {
+    if (g_config.darkcolony_hack && !hWnd)
+    {
+        hWnd = g_ddraw.hwnd;
+
+        MSG msg;
+        real_PeekMessageA(&msg, 0, 0, 0, PM_NOREMOVE);
+    }
+
     if (g_config.limiter_type == LIMIT_PEEKMESSAGE && 
         g_ddraw.ticks_limiter.tick_length > 0 &&
         InterlockedExchange(&g_ddraw.render.screen_updated, FALSE))
