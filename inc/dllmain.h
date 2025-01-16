@@ -31,6 +31,7 @@ typedef BOOL(__stdcall* SETPROCESSDPIAWARENESSCONTEXTPROC)(DPI_AWARENESS_CONTEXT
 
 #if (_WIN32_WINNT < _WIN32_WINNT_WINXP)
 #define SetThreadExecutionState(a) 
+#define DisableProcessWindowsGhosting()
 #endif
 
 #endif

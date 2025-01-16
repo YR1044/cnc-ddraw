@@ -57,6 +57,11 @@ BOOL WINAPI DllMain(HANDLE hDll, DWORD dwReason, LPVOID lpReserved)
             g_dbg_exception_handle = add_handler(1, (PVECTORED_EXCEPTION_HANDLER)dbg_vectored_exception_handler);
         }
 
+        if (g_config.darkcolony_hack)
+        {
+            DisableProcessWindowsGhosting();
+        }
+
         char buf[1024];
 
         if (GetEnvironmentVariable("__COMPAT_LAYER", buf, sizeof(buf)))

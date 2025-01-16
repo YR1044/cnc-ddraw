@@ -2046,6 +2046,14 @@ HWND WINAPI fake_CreateWindowExA(
         dwStyle &= ~WS_POPUP;
     }
 
+    /* Dark Colony */
+    if (HIWORD(lpClassName) && _strcmpi(lpClassName, "Merc Direct Draw Driver") == 0 &&
+        lpWindowName && _strcmpi(lpWindowName, "Direct Draw Driver") == 0 &&
+        !dwExStyle)
+    {
+        dwExStyle |= WS_EX_APPWINDOW;
+    }
+
     /* Fallout 1/2 */
     if (HIWORD(lpClassName) && _strcmpi(lpClassName, "GNW95 Class") == 0 &&
         lpWindowName && strstr(lpWindowName, "FALLOUT"))

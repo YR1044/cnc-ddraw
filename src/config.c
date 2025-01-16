@@ -116,6 +116,7 @@ void cfg_load()
     GET_BOOL(g_config.carma95_hack, "carma95_hack", FALSE);
     GET_BOOL(g_config.sirtech_hack, "sirtech_hack", FALSE);
     GET_BOOL(g_config.flightsim98_hack, "flightsim98_hack", FALSE);
+    GET_BOOL(g_config.darkcolony_hack, "darkcolony_hack", FALSE);
     
     GameHandlesClose = GameHandlesClose || g_config.infantryhack;
 
@@ -873,6 +874,11 @@ static void cfg_create_ini()
             "; Corsairs Gold\n"
             "[corsairs]\n"
             "adjmouse=true\n"
+            "\n"
+            "; Dark Colony\n"
+            "[dc16]\n"
+            "maxgameticks=30\n"
+            "darkcolony_hack=true\n"
             "\n"
             "; Divine Divinity\n"
             "[div]\n"
