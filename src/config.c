@@ -879,6 +879,7 @@ static void cfg_create_ini()
             "[dc16]\n"
             "maxgameticks=30\n"
             "darkcolony_hack=true\n"
+            "hook_peekmessage=true\n"
             "\n"
             "; Divine Divinity\n"
             "[div]\n"
