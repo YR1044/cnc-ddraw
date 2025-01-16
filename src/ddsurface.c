@@ -909,6 +909,11 @@ HRESULT dds_GetClipper(IDirectDrawSurfaceImpl* This, IDirectDrawClipperImpl** lp
 
 HRESULT dds_GetColorKey(IDirectDrawSurfaceImpl* This, DWORD dwFlags, LPDDCOLORKEY lpColorKey)
 {
+    if (!(This->flags & DDSD_CKSRCBLT))
+    {
+        return DDERR_NOCOLORKEY;
+    }
+
     if (dwFlags != DDCKEY_SRCBLT || !lpColorKey)
     {
         TRACE("     NOT_IMPLEMENTED dwFlags=%08X, lpColorKey=%p\n", dwFlags, lpColorKey);
