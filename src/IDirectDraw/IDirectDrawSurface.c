@@ -8,10 +8,14 @@
 
 HRESULT __stdcall IDirectDrawSurface__QueryInterface(IDirectDrawSurfaceImpl* This, REFIID riid, LPVOID FAR* ppvObj)
 {
-    TRACE("-> %s(This=%p, riid=%08X, ppvObj=%p)\n", __FUNCTION__, This, (unsigned int)riid, ppvObj);
+    TRACE("-> %s(This=%p, riid=%08X, ppvObj=%p) [%p]\n", __FUNCTION__, This, (unsigned int)riid, ppvObj, _ReturnAddress());
     HRESULT ret = S_OK;
 
-    if (riid)
+    if (!ppvObj)
+    {
+        ret = E_INVALIDARG;
+    }
+    else if (riid)
     {
         if (IsEqualGUID(&IID_IDirectDrawSurface, riid) ||
             IsEqualGUID(&IID_IDirectDrawSurface2, riid) ||
@@ -60,7 +64,7 @@ HRESULT __stdcall IDirectDrawSurface__QueryInterface(IDirectDrawSurfaceImpl* Thi
 
 ULONG __stdcall IDirectDrawSurface__AddRef(IDirectDrawSurfaceImpl* This)
 {
-    TRACE("-> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     ULONG ret = ++This->ref;
     TRACE("<- %s(This ref=%u)\n", __FUNCTION__, ret);
     return ret;
@@ -68,7 +72,7 @@ ULONG __stdcall IDirectDrawSurface__AddRef(IDirectDrawSurfaceImpl* This)
 
 ULONG __stdcall IDirectDrawSurface__Release(IDirectDrawSurfaceImpl* This)
 {
-    TRACE("-> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
 
     ULONG ret = --This->ref;
 
@@ -82,11 +86,11 @@ ULONG __stdcall IDirectDrawSurface__Release(IDirectDrawSurfaceImpl* This)
     {
         TRACE("     Released (%p)\n", This);
 
-        if (g_ddraw && (This->caps & DDSCAPS_PRIMARYSURFACE))
+        if (g_ddraw.ref && (This->caps & DDSCAPS_PRIMARYSURFACE))
         {
-            EnterCriticalSection(&g_ddraw->cs);
-            g_ddraw->primary = NULL;
-            LeaveCriticalSection(&g_ddraw->cs);
+            EnterCriticalSection(&g_ddraw.cs);
+            g_ddraw.primary = NULL;
+            LeaveCriticalSection(&g_ddraw.cs);
         }
 
         if (This->bitmap)
@@ -111,7 +115,7 @@ ULONG __stdcall IDirectDrawSurface__Release(IDirectDrawSurfaceImpl* This)
         if (This->mapping)
             CloseHandle(This->mapping);
 
-        if (This->backbuffer && (!g_ddraw || (void*)This->backbuffer != g_ddraw->last_freed_surface))
+        if (This->backbuffer && (!g_ddraw.ref || (void*)This->backbuffer != g_ddraw.last_freed_surface))
         {
             IDirectDrawSurface_Release(This->backbuffer);
         }
@@ -119,15 +123,15 @@ ULONG __stdcall IDirectDrawSurface__Release(IDirectDrawSurfaceImpl* This)
         if (This->clipper)
             IDirectDrawClipper_Release(This->clipper);
 
-        if (This->palette && (!g_ddraw || (void*)This->palette != g_ddraw->last_freed_palette))
+        if (This->palette && (!g_ddraw.ref || (void*)This->palette != g_ddraw.last_freed_palette))
         {
             IDirectDrawPalette_Release(This->palette);
         }
 
         DeleteCriticalSection(&This->cs);
 
-        if (g_ddraw)
-            g_ddraw->last_freed_surface = This;
+        if (g_ddraw.ref)
+            g_ddraw.last_freed_surface = This;
 
         HeapFree(GetProcessHeap(), 0, This);
     }
@@ -138,7 +142,7 @@ ULONG __stdcall IDirectDrawSurface__Release(IDirectDrawSurfaceImpl* This)
 
 HRESULT __stdcall IDirectDrawSurface__AddAttachedSurface(IDirectDrawSurfaceImpl* This, LPDIRECTDRAWSURFACE7 lpDDSurface)
 {
-    TRACE("-> %s(This=%p, lpDDSurface=%p)\n", __FUNCTION__, This, lpDDSurface);
+    TRACE("-> %s(This=%p, lpDDSurface=%p) [%p]\n", __FUNCTION__, This, lpDDSurface, _ReturnAddress());
     HRESULT ret = dds_AddAttachedSurface(This, (IDirectDrawSurfaceImpl*)lpDDSurface);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -146,7 +150,7 @@ HRESULT __stdcall IDirectDrawSurface__AddAttachedSurface(IDirectDrawSurfaceImpl*
 
 HRESULT __stdcall IDirectDrawSurface__AddOverlayDirtyRect(IDirectDrawSurfaceImpl* This, LPRECT lpRect)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -161,14 +165,15 @@ HRESULT __stdcall IDirectDrawSurface__Blt(
     LPDDBLTFX lpDDBltFx)
 {
     TRACE_EXT(
-        "-> %s(This=%p, lpDestRect=%p, lpDDSrcSurface=%p, lpSrcRect=%p, dwFlags=%08X, lpDDBltFx=%p)\n",
+        "-> %s(This=%p, lpDestRect=%p, lpDDSrcSurface=%p, lpSrcRect=%p, dwFlags=%08X, lpDDBltFx=%p) [%p]\n",
         __FUNCTION__,
         This,
         lpDestRect,
         lpDDSrcSurface,
         lpSrcRect,
         dwFlags,
-        lpDDBltFx);
+        lpDDBltFx,
+        _ReturnAddress());
 
     HRESULT ret = dds_Blt(This, lpDestRect, (IDirectDrawSurfaceImpl*)lpDDSrcSurface, lpSrcRect, dwFlags, lpDDBltFx);
 
@@ -182,7 +187,7 @@ HRESULT __stdcall IDirectDrawSurface__BltBatch(
     DWORD dwCount,
     DWORD dwFlags)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -197,14 +202,15 @@ HRESULT __stdcall IDirectDrawSurface__BltFast(
     DWORD dwFlags)
 {
     TRACE_EXT(
-        "-> %s(This=%p, dwX=%d, dwY=%d, lpDDSrcSurface=%p, lpSrcRect=%p, dwFlags=%08X)\n",
+        "-> %s(This=%p, dwX=%d, dwY=%d, lpDDSrcSurface=%p, lpSrcRect=%p, dwFlags=%08X) [%p]\n",
         __FUNCTION__,
         This,
         dwX,
         dwY,
         lpDDSrcSurface,
         lpSrcRect,
-        dwFlags);
+        dwFlags, 
+        _ReturnAddress());
 
     HRESULT ret = dds_BltFast(This, dwX, dwY, (IDirectDrawSurfaceImpl*)lpDDSrcSurface, lpSrcRect, dwFlags);
 
@@ -217,7 +223,7 @@ HRESULT __stdcall IDirectDrawSurface__DeleteAttachedSurface(
     DWORD dwFlags,
     LPDIRECTDRAWSURFACE7 lpDDSurface)
 {
-    TRACE("-> %s(This=%p, dwFlags=%08X, lpDDSurface=%p)\n", __FUNCTION__, This, dwFlags, lpDDSurface);
+    TRACE("-> %s(This=%p, dwFlags=%08X, lpDDSurface=%p) [%p]\n", __FUNCTION__, This, dwFlags, lpDDSurface, _ReturnAddress());
     HRESULT ret = dds_DeleteAttachedSurface(This, dwFlags, (IDirectDrawSurfaceImpl*)lpDDSurface);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -229,11 +235,12 @@ HRESULT __stdcall IDirectDrawSurface__EnumAttachedSurfaces(
     LPDDENUMSURFACESCALLBACK7 lpEnumSurfacesCallback)
 {
     TRACE(
-        "-> %s(This=%p, lpContext=%p, lpEnumSurfacesCallback=%p)\n",
+        "-> %s(This=%p, lpContext=%p, lpEnumSurfacesCallback=%p) [%p]\n",
         __FUNCTION__,
         This,
         lpContext,
-        lpEnumSurfacesCallback);
+        lpEnumSurfacesCallback, 
+        _ReturnAddress());
 
     HRESULT ret = dds_EnumAttachedSurfaces(This, lpContext, (LPDDENUMSURFACESCALLBACK)lpEnumSurfacesCallback);
 
@@ -247,7 +254,7 @@ HRESULT __stdcall IDirectDrawSurface__EnumOverlayZOrders(
     LPVOID lpContext,
     LPDDENUMSURFACESCALLBACK7 lpfnCallback)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -259,11 +266,12 @@ HRESULT __stdcall IDirectDrawSurface__Flip(
     DWORD dwFlags)
 {
     TRACE_EXT(
-        "-> %s(This=%p, lpDDSurfaceTargetOverride=%p, dwFlags=%08X)\n",
+        "-> %s(This=%p, lpDDSurfaceTargetOverride=%p, dwFlags=%08X) [%p]\n",
         __FUNCTION__, 
         This, 
         lpDDSurfaceTargetOverride, 
-        dwFlags);
+        dwFlags, 
+        _ReturnAddress());
 
     HRESULT ret = dds_Flip(This, (IDirectDrawSurfaceImpl*)lpDDSurfaceTargetOverride, dwFlags);
 
@@ -276,15 +284,23 @@ HRESULT __stdcall IDirectDrawSurface__GetAttachedSurface(
     LPDDSCAPS2 lpDdsCaps,
     LPDIRECTDRAWSURFACE7 FAR* lpDDsurface)
 {
-    TRACE("-> %s(This=%p, dwCaps=%08X, lpDDsurface=%p)\n", __FUNCTION__, This, lpDdsCaps->dwCaps, lpDDsurface);
+    TRACE(
+        "-> %s(This=%p, dwCaps=%08X, lpDDsurface=%p) [%p]\n",
+        __FUNCTION__,
+        This, 
+        lpDdsCaps->dwCaps, 
+        lpDDsurface, 
+        _ReturnAddress());
+
     HRESULT ret = dds_GetAttachedSurface(This, (LPDDSCAPS)lpDdsCaps, (IDirectDrawSurfaceImpl**)lpDDsurface);
+
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
 }
 
 HRESULT __stdcall IDirectDrawSurface__GetBltStatus(IDirectDrawSurfaceImpl* This, DWORD dwFlags)
 {
-    //TRACE_EXT("-> %s(This=%p)\n", __FUNCTION__, This);
+    //TRACE_EXT("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     //TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -292,7 +308,7 @@ HRESULT __stdcall IDirectDrawSurface__GetBltStatus(IDirectDrawSurfaceImpl* This,
 
 HRESULT __stdcall IDirectDrawSurface__GetCaps(IDirectDrawSurfaceImpl* This, LPDDSCAPS2 lpDDSCaps)
 {
-    TRACE("-> %s(This=%p, lpDDSCaps=%p)\n", __FUNCTION__, This, lpDDSCaps);
+    TRACE("-> %s(This=%p, lpDDSCaps=%p) [%p]\n", __FUNCTION__, This, lpDDSCaps, _ReturnAddress());
     HRESULT ret = dds_GetCaps(This, (LPDDSCAPS)lpDDSCaps);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -300,7 +316,7 @@ HRESULT __stdcall IDirectDrawSurface__GetCaps(IDirectDrawSurfaceImpl* This, LPDD
 
 HRESULT __stdcall IDirectDrawSurface__GetClipper(IDirectDrawSurfaceImpl* This, LPDIRECTDRAWCLIPPER FAR* lpClipper)
 {
-    TRACE_EXT("-> %s(This=%p, lpClipper=%p)\n", __FUNCTION__, This, lpClipper);
+    TRACE_EXT("-> %s(This=%p, lpClipper=%p) [%p]\n", __FUNCTION__, This, lpClipper, _ReturnAddress());
     HRESULT ret = dds_GetClipper(This, (IDirectDrawClipperImpl**)lpClipper);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -308,7 +324,7 @@ HRESULT __stdcall IDirectDrawSurface__GetClipper(IDirectDrawSurfaceImpl* This, L
 
 HRESULT __stdcall IDirectDrawSurface__GetColorKey(IDirectDrawSurfaceImpl* This, DWORD dwFlags, LPDDCOLORKEY lpColorKey)
 {
-    TRACE_EXT("-> %s(This=%p, dwFlags=0x%08X, lpColorKey=%p)\n", __FUNCTION__, This, dwFlags, lpColorKey);
+    TRACE_EXT("-> %s(This=%p, dwFlags=0x%08X, lpColorKey=%p) [%p]\n", __FUNCTION__, This, dwFlags, lpColorKey, _ReturnAddress());
     HRESULT ret = dds_GetColorKey(This, dwFlags, lpColorKey);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -316,7 +332,7 @@ HRESULT __stdcall IDirectDrawSurface__GetColorKey(IDirectDrawSurfaceImpl* This, 
 
 HRESULT __stdcall IDirectDrawSurface__GetDC(IDirectDrawSurfaceImpl* This, HDC FAR* lpHDC)
 {
-    TRACE_EXT("-> %s(This=%p, lpHDC=%p)\n", __FUNCTION__, This, lpHDC);
+    TRACE_EXT("-> %s(This=%p, lpHDC=%p) [%p]\n", __FUNCTION__, This, lpHDC, _ReturnAddress());
     HRESULT ret = dds_GetDC(This, lpHDC);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -324,7 +340,7 @@ HRESULT __stdcall IDirectDrawSurface__GetDC(IDirectDrawSurfaceImpl* This, HDC FA
 
 HRESULT __stdcall IDirectDrawSurface__GetFlipStatus(IDirectDrawSurfaceImpl* This, DWORD dwFlags)
 {
-    TRACE_EXT("-> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE_EXT("-> %s(This=%p, dwFlags=%08X) [%p]\n", __FUNCTION__, This, dwFlags, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -332,7 +348,7 @@ HRESULT __stdcall IDirectDrawSurface__GetFlipStatus(IDirectDrawSurfaceImpl* This
 
 HRESULT __stdcall IDirectDrawSurface__GetOverlayPosition(IDirectDrawSurfaceImpl* This, LPLONG lplX, LPLONG lplY)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_NOTAOVERLAYSURFACE;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -340,7 +356,7 @@ HRESULT __stdcall IDirectDrawSurface__GetOverlayPosition(IDirectDrawSurfaceImpl*
 
 HRESULT __stdcall IDirectDrawSurface__GetPalette(IDirectDrawSurfaceImpl* This, LPDIRECTDRAWPALETTE FAR* lplpDDPalette)
 {
-    TRACE("-> %s(This=%p, lplpDDPalette=%p)\n", __FUNCTION__, This, lplpDDPalette);
+    TRACE("-> %s(This=%p, lplpDDPalette=%p) [%p]\n", __FUNCTION__, This, lplpDDPalette, _ReturnAddress());
     HRESULT ret = dds_GetPalette(This, (IDirectDrawPaletteImpl**)lplpDDPalette);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -348,7 +364,7 @@ HRESULT __stdcall IDirectDrawSurface__GetPalette(IDirectDrawSurfaceImpl* This, L
 
 HRESULT __stdcall IDirectDrawSurface__GetPixelFormat(IDirectDrawSurfaceImpl* This, LPDDPIXELFORMAT ddpfPixelFormat)
 {
-    TRACE_EXT("-> %s(This=%p, ...)\n", __FUNCTION__, This);
+    TRACE_EXT("-> %s(This=%p, ...) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = dds_GetPixelFormat(This, ddpfPixelFormat);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -356,7 +372,7 @@ HRESULT __stdcall IDirectDrawSurface__GetPixelFormat(IDirectDrawSurfaceImpl* Thi
 
 HRESULT __stdcall IDirectDrawSurface__GetSurfaceDesc(IDirectDrawSurfaceImpl* This, LPDDSURFACEDESC2 lpDDSurfaceDesc)
 {
-    TRACE_EXT("-> %s(This=%p, lpDDSurfaceDesc=%p)\n", __FUNCTION__, This, lpDDSurfaceDesc);
+    TRACE_EXT("-> %s(This=%p, lpDDSurfaceDesc=%p) [%p]\n", __FUNCTION__, This, lpDDSurfaceDesc, _ReturnAddress());
     HRESULT ret = dds_GetSurfaceDesc(This, (LPDDSURFACEDESC)lpDDSurfaceDesc);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -367,7 +383,7 @@ HRESULT __stdcall IDirectDrawSurface__Initialize(
     LPDIRECTDRAW lpDD,
     LPDDSURFACEDESC2 lpDDSurfaceDesc)
 {
-    TRACE("-> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -375,7 +391,7 @@ HRESULT __stdcall IDirectDrawSurface__Initialize(
 
 HRESULT __stdcall IDirectDrawSurface__IsLost(IDirectDrawSurfaceImpl* This)
 {
-    //TRACE_EXT("-> %s(This=%p)\n", __FUNCTION__, This);
+    //TRACE_EXT("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     //TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -389,13 +405,14 @@ HRESULT __stdcall IDirectDrawSurface__Lock(
     HANDLE hEvent)
 {
     TRACE_EXT(
-        "-> %s(This=%p, lpDestRect=%p, lpDDSurfaceDesc=%p, dwFlags=%08X, hEvent=%p)\n",
+        "-> %s(This=%p, lpDestRect=%p, lpDDSurfaceDesc=%p, dwFlags=%08X, hEvent=%p) [%p]\n",
         __FUNCTION__,
         This,
         lpDestRect,
         lpDDSurfaceDesc,
         dwFlags,
-        hEvent);
+        hEvent, 
+        _ReturnAddress());
 
     HRESULT ret = dds_Lock(This, lpDestRect, (LPDDSURFACEDESC)lpDDSurfaceDesc, dwFlags, hEvent);
 
@@ -405,7 +422,7 @@ HRESULT __stdcall IDirectDrawSurface__Lock(
 
 HRESULT __stdcall IDirectDrawSurface__ReleaseDC(IDirectDrawSurfaceImpl* This, HDC hDC)
 {
-    TRACE_EXT("-> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE_EXT("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = dds_ReleaseDC(This, hDC);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -413,7 +430,7 @@ HRESULT __stdcall IDirectDrawSurface__ReleaseDC(IDirectDrawSurfaceImpl* This, HD
 
 HRESULT __stdcall IDirectDrawSurface__Restore(IDirectDrawSurfaceImpl* This)
 {
-    TRACE_EXT("-> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE_EXT("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -421,7 +438,7 @@ HRESULT __stdcall IDirectDrawSurface__Restore(IDirectDrawSurfaceImpl* This)
 
 HRESULT __stdcall IDirectDrawSurface__SetClipper(IDirectDrawSurfaceImpl* This, LPDIRECTDRAWCLIPPER lpClipper)
 {
-    TRACE("-> %s(This=%p, lpClipper=%p)\n", __FUNCTION__, This, lpClipper);
+    TRACE("-> %s(This=%p, lpClipper=%p) [%p]\n", __FUNCTION__, This, lpClipper, _ReturnAddress());
     HRESULT ret = dds_SetClipper(This, (IDirectDrawClipperImpl*)lpClipper);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -429,7 +446,7 @@ HRESULT __stdcall IDirectDrawSurface__SetClipper(IDirectDrawSurfaceImpl* This, L
 
 HRESULT __stdcall IDirectDrawSurface__SetColorKey(IDirectDrawSurfaceImpl* This, DWORD dwFlags, LPDDCOLORKEY lpColorKey)
 {
-    TRACE_EXT("-> %s(This=%p, dwFlags=0x%08X, lpColorKey=%p)\n", __FUNCTION__, This, dwFlags, lpColorKey);
+    TRACE_EXT("-> %s(This=%p, dwFlags=0x%08X, lpColorKey=%p) [%p]\n", __FUNCTION__, This, dwFlags, lpColorKey, _ReturnAddress());
     HRESULT ret = dds_SetColorKey(This, dwFlags, lpColorKey);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -437,7 +454,7 @@ HRESULT __stdcall IDirectDrawSurface__SetColorKey(IDirectDrawSurfaceImpl* This, 
 
 HRESULT __stdcall IDirectDrawSurface__SetOverlayPosition(IDirectDrawSurfaceImpl* This, LONG lX, LONG lY)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -445,7 +462,7 @@ HRESULT __stdcall IDirectDrawSurface__SetOverlayPosition(IDirectDrawSurfaceImpl*
 
 HRESULT __stdcall IDirectDrawSurface__SetPalette(IDirectDrawSurfaceImpl* This, LPDIRECTDRAWPALETTE lpDDPalette)
 {
-    TRACE("-> %s(This=%p, lpDDPalette=%p)\n", __FUNCTION__, This, lpDDPalette);
+    TRACE("-> %s(This=%p, lpDDPalette=%p) [%p]\n", __FUNCTION__, This, lpDDPalette, _ReturnAddress());
     HRESULT ret = dds_SetPalette(This, (IDirectDrawPaletteImpl*)lpDDPalette);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -453,7 +470,7 @@ HRESULT __stdcall IDirectDrawSurface__SetPalette(IDirectDrawSurfaceImpl* This, L
 
 HRESULT __stdcall IDirectDrawSurface__Unlock(IDirectDrawSurfaceImpl* This, LPRECT lpRect)
 {
-    TRACE_EXT("-> %s(This=%p, lpRect=%p)\n", __FUNCTION__, This, lpRect);
+    TRACE_EXT("-> %s(This=%p, lpRect=%p) [%p]\n", __FUNCTION__, This, lpRect, _ReturnAddress());
     HRESULT ret = dds_Unlock(This, lpRect);
     TRACE_EXT("<- %s\n", __FUNCTION__);
     return ret;
@@ -467,7 +484,7 @@ HRESULT __stdcall IDirectDrawSurface__UpdateOverlay(
     DWORD dwFlags,
     LPDDOVERLAYFX lpDDOverlayFx)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -475,7 +492,7 @@ HRESULT __stdcall IDirectDrawSurface__UpdateOverlay(
 
 HRESULT __stdcall IDirectDrawSurface__UpdateOverlayDisplay(IDirectDrawSurfaceImpl* This, DWORD dwFlags)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -486,7 +503,7 @@ HRESULT __stdcall IDirectDrawSurface__UpdateOverlayZOrder(
     DWORD dwFlags,
     LPDIRECTDRAWSURFACE7 lpDDSReference)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -494,7 +511,7 @@ HRESULT __stdcall IDirectDrawSurface__UpdateOverlayZOrder(
 
 HRESULT __stdcall IDirectDrawSurface__GetDDInterface(IDirectDrawSurfaceImpl* This, LPVOID* lplpDD)
 {
-    TRACE("-> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("-> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = dds_GetDDInterface(This, lplpDD);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -502,7 +519,7 @@ HRESULT __stdcall IDirectDrawSurface__GetDDInterface(IDirectDrawSurfaceImpl* Thi
 
 HRESULT __stdcall IDirectDrawSurface__PageLock(IDirectDrawSurfaceImpl* This, DWORD dwFlags)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -510,7 +527,7 @@ HRESULT __stdcall IDirectDrawSurface__PageLock(IDirectDrawSurfaceImpl* This, DWO
 
 HRESULT __stdcall IDirectDrawSurface__PageUnlock(IDirectDrawSurfaceImpl* This, DWORD dwFlags)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -518,7 +535,7 @@ HRESULT __stdcall IDirectDrawSurface__PageUnlock(IDirectDrawSurfaceImpl* This, D
 
 HRESULT __stdcall IDirectDrawSurface__SetSurfaceDesc(IDirectDrawSurfaceImpl* This, LPDDSURFACEDESC2 lpDDSD, DWORD dwFlags)
 {
-    TRACE("-> %s(This=%p, lpDDSD=%p, dwFlags=%08X)\n", __FUNCTION__, This, lpDDSD, dwFlags);
+    TRACE("-> %s(This=%p, lpDDSD=%p, dwFlags=%08X) [%p]\n", __FUNCTION__, This, lpDDSD, dwFlags, _ReturnAddress());
     HRESULT ret = dds_SetSurfaceDesc(This, lpDDSD, dwFlags);
     TRACE("<- %s\n", __FUNCTION__);
     return ret;
@@ -531,7 +548,7 @@ HRESULT __stdcall IDirectDrawSurface__SetPrivateData(
     DWORD dwSize,
     DWORD dwFlags)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_OUTOFMEMORY;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -543,7 +560,7 @@ HRESULT __stdcall IDirectDrawSurface__GetPrivateData(
     LPVOID lpBuffer,
     LPDWORD lpdwBufferSize)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_NOTFOUND;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -551,7 +568,7 @@ HRESULT __stdcall IDirectDrawSurface__GetPrivateData(
 
 HRESULT __stdcall IDirectDrawSurface__FreePrivateData(IDirectDrawSurfaceImpl* This, REFGUID rtag)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DD_OK;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -559,7 +576,7 @@ HRESULT __stdcall IDirectDrawSurface__FreePrivateData(IDirectDrawSurfaceImpl* Th
 
 HRESULT __stdcall IDirectDrawSurface__GetUniquenessValue(IDirectDrawSurfaceImpl* This, LPDWORD lpdwValue)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_INVALIDOBJECT;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -567,7 +584,7 @@ HRESULT __stdcall IDirectDrawSurface__GetUniquenessValue(IDirectDrawSurfaceImpl*
 
 HRESULT __stdcall IDirectDrawSurface__ChangeUniquenessValue(IDirectDrawSurfaceImpl* This)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_INVALIDOBJECT;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -575,7 +592,7 @@ HRESULT __stdcall IDirectDrawSurface__ChangeUniquenessValue(IDirectDrawSurfaceIm
 
 HRESULT __stdcall IDirectDrawSurface__SetPriority(IDirectDrawSurfaceImpl* This, DWORD dwPrio)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_INVALIDOBJECT;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -583,7 +600,7 @@ HRESULT __stdcall IDirectDrawSurface__SetPriority(IDirectDrawSurfaceImpl* This, 
 
 HRESULT __stdcall IDirectDrawSurface__GetPriority(IDirectDrawSurfaceImpl* This, LPDWORD lpdwPrio)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_INVALIDOBJECT;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -591,7 +608,7 @@ HRESULT __stdcall IDirectDrawSurface__GetPriority(IDirectDrawSurfaceImpl* This, 
 
 HRESULT __stdcall IDirectDrawSurface__SetLOD(IDirectDrawSurfaceImpl* This, DWORD dwLod)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_INVALIDOBJECT;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;
@@ -599,7 +616,7 @@ HRESULT __stdcall IDirectDrawSurface__SetLOD(IDirectDrawSurfaceImpl* This, DWORD
 
 HRESULT __stdcall IDirectDrawSurface__GetLOD(IDirectDrawSurfaceImpl* This, LPDWORD lpdwLod)
 {
-    TRACE("NOT_IMPLEMENTED -> %s(This=%p)\n", __FUNCTION__, This);
+    TRACE("NOT_IMPLEMENTED -> %s(This=%p) [%p]\n", __FUNCTION__, This, _ReturnAddress());
     HRESULT ret = DDERR_INVALIDOBJECT;
     TRACE("NOT_IMPLEMENTED <- %s\n", __FUNCTION__);
     return ret;

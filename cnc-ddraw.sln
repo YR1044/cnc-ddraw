@@ -8,22 +8,22 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
-		DebugLog|x86 = DebugLog|x86
-		DebugLogMini|x86 = DebugLogMini|x86
+		DebugLogMiniXP|x86 = DebugLogMiniXP|x86
+		DebugLogXP|x86 = DebugLogXP|x86
 		Release|x86 = Release|x86
-		ReleaseWin2000|x86 = ReleaseWin2000|x86
+		ReleaseXP|x86 = ReleaseXP|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{96094551-5D52-4EBD-BE4C-5291A03507FC}.Debug|x86.ActiveCfg = Debug|Win32
 		{96094551-5D52-4EBD-BE4C-5291A03507FC}.Debug|x86.Build.0 = Debug|Win32
-		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLog|x86.ActiveCfg = DebugLog|Win32
-		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLog|x86.Build.0 = DebugLog|Win32
-		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLogMini|x86.ActiveCfg = DebugLogMini|Win32
-		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLogMini|x86.Build.0 = DebugLogMini|Win32
+		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLogMiniXP|x86.ActiveCfg = DebugLogMiniXP|Win32
+		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLogMiniXP|x86.Build.0 = DebugLogMiniXP|Win32
+		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLogXP|x86.ActiveCfg = DebugLogXP|Win32
+		{96094551-5D52-4EBD-BE4C-5291A03507FC}.DebugLogXP|x86.Build.0 = DebugLogXP|Win32
 		{96094551-5D52-4EBD-BE4C-5291A03507FC}.Release|x86.ActiveCfg = Release|Win32
 		{96094551-5D52-4EBD-BE4C-5291A03507FC}.Release|x86.Build.0 = Release|Win32
-		{96094551-5D52-4EBD-BE4C-5291A03507FC}.ReleaseWin2000|x86.ActiveCfg = ReleaseWin2000|Win32
-		{96094551-5D52-4EBD-BE4C-5291A03507FC}.ReleaseWin2000|x86.Build.0 = ReleaseWin2000|Win32
+		{96094551-5D52-4EBD-BE4C-5291A03507FC}.ReleaseXP|x86.ActiveCfg = ReleaseXP|Win32
+		{96094551-5D52-4EBD-BE4C-5291A03507FC}.ReleaseXP|x86.Build.0 = ReleaseXP|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

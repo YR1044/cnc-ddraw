@@ -1,7 +1,5 @@
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdio.h>
-#include <psapi.h>
 #include "directinput.h"
 #include "dd.h"
 #include "winapi_hooks.h"
@@ -10,6 +8,8 @@
 #include "dllmain.h"
 #include "config.h"
 #include "utils.h"
+#include "patch.h"
+#include "versionhelpers.h"
 
 #ifdef _MSC_VER
 #include "detours.h"
@@ -43,23 +43,45 @@ SHOWWINDOWPROC real_ShowWindow = ShowWindow;
 GETTOPWINDOWPROC real_GetTopWindow = GetTopWindow;
 GETFOREGROUNDWINDOWPROC real_GetForegroundWindow = GetForegroundWindow;
 STRETCHBLTPROC real_StretchBlt = StretchBlt;
+BITBLTPROC real_BitBlt = BitBlt;
 SETDIBITSTODEVICEPROC real_SetDIBitsToDevice = SetDIBitsToDevice;
 STRETCHDIBITSPROC real_StretchDIBits = StretchDIBits;
 SETFOREGROUNDWINDOWPROC real_SetForegroundWindow = SetForegroundWindow;
 SETWINDOWSHOOKEXAPROC real_SetWindowsHookExA = SetWindowsHookExA;
 PEEKMESSAGEAPROC real_PeekMessageA = PeekMessageA;
 GETMESSAGEAPROC real_GetMessageA = GetMessageA;
+GETWINDOWPLACEMENTPROC real_GetWindowPlacement = GetWindowPlacement;
+SETWINDOWPLACEMENTPROC real_SetWindowPlacement = SetWindowPlacement;
+ENUMDISPLAYSETTINGSAPROC real_EnumDisplaySettingsA = EnumDisplaySettingsA;
+DEFWINDOWPROCAPROC real_DefWindowProcA = DefWindowProcA;
+SETPARENTPROC real_SetParent = SetParent;
+BEGINPAINTPROC real_BeginPaint = BeginPaint;
+GETKEYSTATEPROC real_GetKeyState = GetKeyState;
+GETASYNCKEYSTATEPROC real_GetAsyncKeyState = GetAsyncKeyState;
 GETDEVICECAPSPROC real_GetDeviceCaps = GetDeviceCaps;
 CREATEFONTINDIRECTAPROC real_CreateFontIndirectA = CreateFontIndirectA;
 CREATEFONTAPROC real_CreateFontA = CreateFontA;
+GETSYSTEMPALETTEENTRIESPROC real_GetSystemPaletteEntries = GetSystemPaletteEntries;
+SELECTPALETTEPROC real_SelectPalette = SelectPalette;
+REALIZEPALETTEPROC real_RealizePalette = RealizePalette;
 LOADLIBRARYAPROC real_LoadLibraryA = LoadLibraryA;
 LOADLIBRARYWPROC real_LoadLibraryW = LoadLibraryW;
 LOADLIBRARYEXAPROC real_LoadLibraryExA = LoadLibraryExA;
 LOADLIBRARYEXWPROC real_LoadLibraryExW = LoadLibraryExW;
 GETPROCADDRESSPROC real_GetProcAddress = GetProcAddress;
 GETDISKFREESPACEAPROC real_GetDiskFreeSpaceA = GetDiskFreeSpaceA;
+GETVERSIONPROC real_GetVersion = GetVersion;
+GETVERSIONEXAPROC real_GetVersionExA = GetVersionExA;
 COCREATEINSTANCEPROC real_CoCreateInstance = CoCreateInstance;
+MCISENDCOMMANDAPROC real_mciSendCommandA = mciSendCommandA;
 SETUNHANDLEDEXCEPTIONFILTERPROC real_SetUnhandledExceptionFilter = SetUnhandledExceptionFilter;
+AVISTREAMGETFRAMEOPENPROC real_AVIStreamGetFrameOpen = AVIStreamGetFrameOpen;
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN2K)
+SETWINDOWLONGWPROC real_SetWindowLongW = SetWindowLongW;
+#else
+SETWINDOWLONGWPROC real_SetWindowLongW;
+#endif
 
 HOOKLIST g_hook_hooklist[] =
 {
@@ -93,8 +115,21 @@ HOOKLIST g_hook_hooklist[] =
             { "GetForegroundWindow", (PROC)fake_GetForegroundWindow, (PROC*)&real_GetForegroundWindow, 0 },
             { "PeekMessageA", (PROC)fake_PeekMessageA, (PROC*)&real_PeekMessageA, 0 },
             { "GetMessageA", (PROC)fake_GetMessageA, (PROC*)&real_GetMessageA, 0 },
+            { "GetWindowPlacement", (PROC)fake_GetWindowPlacement, (PROC*)&real_GetWindowPlacement, 0 },
+            { "SetWindowPlacement", (PROC)fake_SetWindowPlacement, (PROC*)&real_SetWindowPlacement, 0 },
+            { "EnumDisplaySettingsA", (PROC)fake_EnumDisplaySettingsA, (PROC*)&real_EnumDisplaySettingsA, 0 },
+            { "DefWindowProcA", (PROC)fake_DefWindowProcA, (PROC*)&real_DefWindowProcA, 0 },
+            { "SetParent", (PROC)fake_SetParent, (PROC*)&real_SetParent, 0 },
+            { "BeginPaint", (PROC)fake_BeginPaint, (PROC*)&real_BeginPaint, 0 },
+            { "GetKeyState", (PROC)fake_GetKeyState, (PROC*)&real_GetKeyState, 0 },
+            { "GetAsyncKeyState", (PROC)fake_GetAsyncKeyState, (PROC*)&real_GetAsyncKeyState, 0 },
             { "SetForegroundWindow", (PROC)fake_SetForegroundWindow, (PROC*)&real_SetForegroundWindow, 0 },
             { "SetWindowsHookExA", (PROC)fake_SetWindowsHookExA, (PROC*)&real_SetWindowsHookExA, 0 },
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN2K)
+            { "SetWindowLongW", (PROC)fake_SetWindowLongW, (PROC*)&real_SetWindowLongW, 0 },
+#endif
+
             { "", NULL, NULL, 0 }
         }
     },
@@ -102,6 +137,20 @@ HOOKLIST g_hook_hooklist[] =
         "ole32.dll",
         {
             { "CoCreateInstance", (PROC)fake_CoCreateInstance, (PROC*)&real_CoCreateInstance, HOOK_SKIP_2 },
+            { "", NULL, NULL, 0 }
+        }
+    },
+    {
+        "winmm.dll",
+        {
+            { "mciSendCommandA", (PROC)fake_mciSendCommandA, (PROC*)&real_mciSendCommandA, HOOK_SKIP_2 },
+            { "", NULL, NULL, 0 }
+        }
+    },
+    {
+        "Avifil32.dll",
+        {
+            { "AVIStreamGetFrameOpen", (PROC)fake_AVIStreamGetFrameOpen, (PROC*)&real_AVIStreamGetFrameOpen, 0 },
             { "", NULL, NULL, 0 }
         }
     },
@@ -124,12 +173,25 @@ HOOKLIST g_hook_hooklist[] =
     {
         "gdi32.dll",
         {
+            { "BitBlt", (PROC)fake_BitBlt, (PROC*)&real_BitBlt, HOOK_SKIP_2 },
             { "StretchBlt", (PROC)fake_StretchBlt, (PROC*)&real_StretchBlt, HOOK_SKIP_2 },
             { "SetDIBitsToDevice", (PROC)fake_SetDIBitsToDevice, (PROC*)&real_SetDIBitsToDevice, HOOK_SKIP_2 },
             { "StretchDIBits", (PROC)fake_StretchDIBits, (PROC*)&real_StretchDIBits, HOOK_SKIP_2 },
             { "GetDeviceCaps", (PROC)fake_GetDeviceCaps, (PROC*)&real_GetDeviceCaps, HOOK_LOCAL_ONLY },
+            { "GetDeviceCaps", (PROC)fake_GetDeviceCaps_system, NULL, HOOK_SYSTEM_ONLY },
             { "CreateFontA", (PROC)fake_CreateFontA, (PROC*)&real_CreateFontA, 0 },
+            { "GetSystemPaletteEntries", (PROC)fake_GetSystemPaletteEntries, (PROC*)&real_GetSystemPaletteEntries, 0 },
+            { "SelectPalette", (PROC)fake_SelectPalette, (PROC*)&real_SelectPalette, 0 },
+            { "RealizePalette", (PROC)fake_RealizePalette, (PROC*)&real_RealizePalette, 0 },
             { "CreateFontIndirectA", (PROC)fake_CreateFontIndirectA, (PROC*)&real_CreateFontIndirectA, 0 },
+            { "", NULL, NULL, 0 }
+        }
+    },
+    {
+        "WING32.DLL",
+        {
+            { "WinGBitBlt", (PROC)fake_WinGBitBlt, NULL, 0 },
+            { "WinGStretchBlt", (PROC)fake_WinGStretchBlt, NULL, 0 },
             { "", NULL, NULL, 0 }
         }
     },
@@ -141,7 +203,12 @@ HOOKLIST g_hook_hooklist[] =
             { "LoadLibraryExA", (PROC)fake_LoadLibraryExA, (PROC*)&real_LoadLibraryExA, HOOK_SKIP_2 },
             { "LoadLibraryExW", (PROC)fake_LoadLibraryExW, (PROC*)&real_LoadLibraryExW, HOOK_SKIP_2 },
             { "GetProcAddress", (PROC)fake_GetProcAddress, (PROC*)&real_GetProcAddress, HOOK_SKIP_2 },
-            { "GetDiskFreeSpaceA", (PROC)fake_GetDiskFreeSpaceA, (PROC*)&real_GetDiskFreeSpaceA, HOOK_SKIP_2 },
+            { "GetDiskFreeSpaceA", (PROC)fake_GetDiskFreeSpaceA, (PROC*)&real_GetDiskFreeSpaceA, 0 },
+            { "GetVersion", (PROC)fake_GetVersion, (PROC*)&real_GetVersion, 0 },
+            { "GetVersionExA", (PROC)fake_GetVersionExA, (PROC*)&real_GetVersionExA, 0 },
+#if defined(_DEBUG) && defined(__GNUC__)
+            { "SetUnhandledExceptionFilter", (PROC)fake_SetUnhandledExceptionFilter, (PROC*)&real_SetUnhandledExceptionFilter, 0 },
+#endif
             { "", NULL, NULL, 0 }
         }
     },
@@ -177,17 +244,15 @@ void hook_patch_obfuscated_iat_list(HMODULE hmod, BOOL unhook, HOOKLIST* hooks, 
         if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
             return;
 
-        PIMAGE_NT_HEADERS nt_headers = (PIMAGE_NT_HEADERS)((DWORD)dos_header + (DWORD)dos_header->e_lfanew);
+        PIMAGE_NT_HEADERS nt_headers = (PIMAGE_NT_HEADERS)((DWORD)hmod + (DWORD)dos_header->e_lfanew);
         if (nt_headers->Signature != IMAGE_NT_SIGNATURE)
             return;
 
         DWORD import_desc_rva = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-        DWORD import_desc_size = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size;
-
-        if (import_desc_rva == 0 || import_desc_size == 0)
+        if (!import_desc_rva)
             return;
 
-        PIMAGE_IMPORT_DESCRIPTOR import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)dos_header + import_desc_rva);
+        PIMAGE_IMPORT_DESCRIPTOR import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)hmod + import_desc_rva);
 
         while (import_desc->FirstThunk)
         {
@@ -199,13 +264,13 @@ void hook_patch_obfuscated_iat_list(HMODULE hmod, BOOL unhook, HOOKLIST* hooks, 
 
             for (int i = 0; hooks[i].module_name[0]; i++)
             {
-                char* imp_module_name = (char*)((DWORD)dos_header + import_desc->Name);
+                char* imp_module_name = (char*)((DWORD)hmod + import_desc->Name);
 
                 if (_stricmp(imp_module_name, hooks[i].module_name) == 0)
                 {
                     HMODULE cur_mod = GetModuleHandleA(hooks[i].module_name);
 
-                    PIMAGE_THUNK_DATA first_thunk = (void*)((DWORD)dos_header + import_desc->FirstThunk);
+                    PIMAGE_THUNK_DATA first_thunk = (void*)((DWORD)hmod + import_desc->FirstThunk);
 
                     while (first_thunk->u1.Function)
                     {
@@ -227,6 +292,9 @@ void hook_patch_obfuscated_iat_list(HMODULE hmod, BOOL unhook, HOOKLIST* hooks, 
                                 continue;
 
                             if (!is_local && (hooks[i].data[x].flags & HOOK_LOCAL_ONLY))
+                                continue;
+
+                            if (is_local && (hooks[i].data[x].flags & HOOK_SYSTEM_ONLY))
                                 continue;
 
                             if (unhook)
@@ -299,17 +367,15 @@ void hook_patch_iat_list(HMODULE hmod, BOOL unhook, HOOKLIST* hooks, BOOL is_loc
         if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
             return;
 
-        PIMAGE_NT_HEADERS nt_headers = (PIMAGE_NT_HEADERS)((DWORD)dos_header + (DWORD)dos_header->e_lfanew);
+        PIMAGE_NT_HEADERS nt_headers = (PIMAGE_NT_HEADERS)((DWORD)hmod + (DWORD)dos_header->e_lfanew);
         if (nt_headers->Signature != IMAGE_NT_SIGNATURE)
             return;
 
         DWORD import_desc_rva = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-        DWORD import_desc_size = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size;
-
-        if (import_desc_rva == 0 || import_desc_size == 0)
+        if (!import_desc_rva)
             return;
 
-        PIMAGE_IMPORT_DESCRIPTOR import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)dos_header + import_desc_rva);
+        PIMAGE_IMPORT_DESCRIPTOR import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)hmod + import_desc_rva);
 
         while (import_desc->FirstThunk)
         {
@@ -321,12 +387,12 @@ void hook_patch_iat_list(HMODULE hmod, BOOL unhook, HOOKLIST* hooks, BOOL is_loc
 
             for (int i = 0; hooks[i].module_name[0]; i++)
             {
-                char* imp_module_name = (char*)((DWORD)dos_header + import_desc->Name);
+                char* imp_module_name = (char*)((DWORD)hmod + import_desc->Name);
 
                 if (_stricmp(imp_module_name, hooks[i].module_name) == 0)
                 {
-                    PIMAGE_THUNK_DATA first_thunk = (void*)((DWORD)dos_header + import_desc->FirstThunk);
-                    PIMAGE_THUNK_DATA o_first_thunk = (void*)((DWORD)dos_header + import_desc->OriginalFirstThunk);
+                    PIMAGE_THUNK_DATA first_thunk = (void*)((DWORD)hmod + import_desc->FirstThunk);
+                    PIMAGE_THUNK_DATA o_first_thunk = (void*)((DWORD)hmod + import_desc->OriginalFirstThunk);
 
                     while (first_thunk->u1.Function)
                     {
@@ -347,6 +413,9 @@ void hook_patch_iat_list(HMODULE hmod, BOOL unhook, HOOKLIST* hooks, BOOL is_loc
                                     continue;
 
                                 if (!is_local && (hooks[i].data[x].flags & HOOK_LOCAL_ONLY))
+                                    continue;
+
+                                if (is_local && (hooks[i].data[x].flags & HOOK_SYSTEM_ONLY))
                                     continue;
 
 #if defined(__GNUC__)
@@ -417,27 +486,25 @@ BOOL hook_got_ddraw_import(HMODULE mod, BOOL check_imported_dlls)
         if (dos_header->e_magic != IMAGE_DOS_SIGNATURE)
             return FALSE;
 
-        PIMAGE_NT_HEADERS nt_headers = (PIMAGE_NT_HEADERS)((DWORD)dos_header + (DWORD)dos_header->e_lfanew);
+        PIMAGE_NT_HEADERS nt_headers = (PIMAGE_NT_HEADERS)((DWORD)mod + (DWORD)dos_header->e_lfanew);
         if (nt_headers->Signature != IMAGE_NT_SIGNATURE)
             return FALSE;
 
         DWORD import_desc_rva = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-        DWORD import_desc_size = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size;
-
-        if (import_desc_rva == 0 || import_desc_size == 0)
+        if (!import_desc_rva)
             return FALSE;
 
-        PIMAGE_IMPORT_DESCRIPTOR import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)dos_header + import_desc_rva);
+        PIMAGE_IMPORT_DESCRIPTOR import_desc = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)mod + import_desc_rva);
 
         while (import_desc->FirstThunk)
         {
             if (import_desc->Name)
             {
-                char* imp_module_name = (char*)((DWORD)dos_header + import_desc->Name);
+                char* imp_module_name = (char*)((DWORD)mod + import_desc->Name);
 
                 if (_stricmp(imp_module_name, "ddraw.dll") == 0)
                 {
-                    PIMAGE_THUNK_DATA first_thunk = (void*)((DWORD)dos_header + import_desc->FirstThunk);
+                    PIMAGE_THUNK_DATA first_thunk = (void*)((DWORD)mod + import_desc->FirstThunk);
 
                     if (first_thunk->u1.Function)
                         return TRUE;
@@ -510,14 +577,20 @@ void hook_create(HOOKLIST* hooks, BOOL initial_hook)
 
                     /* Don't hook reshade/swiftshader/mesa3d */
                     if (_strcmpi(mod_filename, "opengl32") == 0 ||
+                        _strcmpi(mod_filename, "libgallium_wgl") == 0 ||
+                        _strcmpi(mod_filename, "libglapi") == 0 ||
                         _strcmpi(mod_filename, "d3d9") == 0 ||
+                        _strcmpi(mod_filename, "mdraw") == 0 ||
+                        _strcmpi(mod_filename, "SH33W32") == 0 ||
                         _strcmpi(mod_filename, "Shw32") == 0)
                         continue;
 
                     BOOL is_local = _strnicmp(game_dir, mod_dir, strlen(game_dir)) == 0;
+                    BOOL wine_hook = IsWine() && _strcmpi(mod_filename, "mciavi32") == 0;
 
                     if (is_local ||
-                        _strcmpi(mod_filename, "mciavi32") == 0 ||
+                        wine_hook ||
+                        _strcmpi(mod_filename, "QuickTime") == 0 ||
                         _strcmpi(mod_filename, "MSVFW32") == 0 ||
                         _strcmpi(mod_filename, "quartz") == 0 ||
                         _strcmpi(mod_filename, "winmm") == 0)
@@ -580,9 +653,11 @@ void hook_revert(HOOKLIST* hooks)
                     _splitpath(mod_path, NULL, mod_dir, mod_filename, NULL);
 
                     BOOL is_local = _strnicmp(game_dir, mod_dir, strlen(game_dir)) == 0;
+                    BOOL wine_hook = IsWine() && _strcmpi(mod_filename, "mciavi32") == 0;
 
                     if (is_local ||
-                        _strcmpi(mod_filename, "mciavi32") == 0 ||
+                        wine_hook ||
+                        _strcmpi(mod_filename, "QuickTime") == 0 ||
                         _strcmpi(mod_filename, "MSVFW32") == 0 ||
                         _strcmpi(mod_filename, "quartz") == 0 ||
                         _strcmpi(mod_filename, "winmm") == 0)
@@ -600,35 +675,42 @@ void hook_revert(HOOKLIST* hooks)
     }
 }
 
-void hook_init(BOOL initial_hook)
+void hook_init()
 {
-    if (initial_hook)
+    if (!g_hook_active)
     {
         if (g_config.hook == 4 && hook_got_ddraw_import(GetModuleHandleA(NULL), TRUE))
         {
             /* Switch to 3 if we can be sure that ddraw.dll will not be unloaded from the process */
             g_config.hook = 3;
+
+            TRACE("Switched to hook 3\n");
         }
     }
 
     if (!g_hook_active || g_config.hook == 3 || g_config.hook == 4)
     {
 #if defined(_DEBUG) && defined(_MSC_VER)
-        if (initial_hook)
+        if (!g_hook_active)
         {
             DetourTransactionBegin();
             DetourUpdateThread(GetCurrentThread());
             DetourAttach((PVOID*)&real_SetUnhandledExceptionFilter, (PVOID)fake_SetUnhandledExceptionFilter);
             DetourTransactionCommit();
+
+            if (!IsDebuggerPresent())
+            {
+                patch_ljmp((void*)_invoke_watson, (void*)dbg_invoke_watson);
+            }
         }
 #endif
 
-        if (initial_hook)
+        if (!g_hook_active)
         {
             hook_patch_iat(GetModuleHandle("AcGenral"), FALSE, "user32.dll", "SetWindowsHookExA", (PROC)fake_SetWindowsHookExA);
         }
 
-        hook_create((HOOKLIST*)&g_hook_hooklist, initial_hook);
+        hook_create((HOOKLIST*)&g_hook_hooklist, !g_hook_active);
 
         g_hook_active = TRUE;
     }
@@ -642,12 +724,13 @@ void hook_exit()
 
         hook_revert((HOOKLIST*)&g_hook_hooklist);
 
-#if defined(_DEBUG) && defined(_MSC_VER)
+#if defined(_DEBUG)
+#if defined(_MSC_VER)
         DetourTransactionBegin();
         DetourUpdateThread(GetCurrentThread());
         DetourDetach((PVOID*)&real_SetUnhandledExceptionFilter, (PVOID)fake_SetUnhandledExceptionFilter);
         DetourTransactionCommit();
-
+#endif
         real_SetUnhandledExceptionFilter(g_dbg_exception_filter);
 #endif
 

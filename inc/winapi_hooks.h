@@ -1,8 +1,8 @@
 #ifndef WINAPI_HOOKS_H
 #define WINAPI_HOOKS_H
 
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <vfw.h>
 
 
 BOOL WINAPI fake_GetCursorPos(LPPOINT lpPoint);
@@ -22,6 +22,7 @@ BOOL WINAPI fake_SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int
 BOOL WINAPI fake_MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint);
 LRESULT WINAPI fake_SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 LONG WINAPI fake_SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong);
+LONG WINAPI fake_SetWindowLongW(HWND hWnd, int nIndex, LONG dwNewLong);
 LONG WINAPI fake_GetWindowLongA(HWND hWnd, int nIndex);
 BOOL WINAPI fake_EnableWindow(HWND hWnd, BOOL bEnable);
 BOOL WINAPI fake_DestroyWindow(HWND hWnd);
@@ -33,10 +34,28 @@ BOOL WINAPI fake_SetForegroundWindow(HWND hWnd);
 HHOOK WINAPI fake_SetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId);
 BOOL WINAPI fake_PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
 BOOL WINAPI fake_GetMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax);
+BOOL WINAPI fake_GetWindowPlacement(HWND hWnd, WINDOWPLACEMENT* lpwndpl);
+BOOL WINAPI fake_SetWindowPlacement(HWND hWnd, const WINDOWPLACEMENT* lpwndpl);
+BOOL WINAPI fake_EnumDisplaySettingsA(LPCSTR lpszDeviceName, DWORD iModeNum, DEVMODEA* lpDevMode);
+LRESULT WINAPI fake_DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+HWND WINAPI fake_SetParent(HWND hWndChild, HWND hWndNewParent);
+HDC WINAPI fake_BeginPaint(HWND hWnd, LPPAINTSTRUCT lpPaint);
+SHORT WINAPI fake_GetKeyState(int nVirtKey);
+SHORT WINAPI fake_GetAsyncKeyState(int vKey);
 int WINAPI fake_GetDeviceCaps(HDC hdc, int index);
+int WINAPI fake_GetDeviceCaps_system(HDC hdc, int index);
 
 BOOL WINAPI fake_StretchBlt(
     HDC hdcDest, int xDest, int yDest, int wDest, int hDest, HDC hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, DWORD rop);
+
+BOOL WINAPI fake_WinGStretchBlt(
+    HDC hdcDest, int xDest, int yDest, int wDest, int hDest, HDC hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc);
+
+BOOL WINAPI fake_WinGBitBlt(
+    HDC hdc, int x, int y, int cx, int cy, HDC hdcSrc, int x1, int y1);
+
+BOOL WINAPI fake_BitBlt(
+    HDC hdc, int x, int y, int cx, int cy, HDC hdcSrc, int x1, int y1, DWORD rop);
 
 int WINAPI fake_SetDIBitsToDevice(
     HDC, int, int, DWORD, DWORD, int, int, UINT, UINT, const VOID*, const BITMAPINFO*, UINT);
@@ -46,6 +65,9 @@ int WINAPI fake_StretchDIBits(
 
 HFONT WINAPI fake_CreateFontIndirectA(CONST LOGFONTA*);
 HFONT WINAPI fake_CreateFontA(int, int, int, int, int, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, LPCTSTR);
+UINT WINAPI fake_GetSystemPaletteEntries(HDC, UINT, UINT, LPPALETTEENTRY);
+HPALETTE WINAPI fake_SelectPalette(HDC, HPALETTE, BOOL);
+UINT WINAPI fake_RealizePalette(HDC);
 
 HMODULE WINAPI fake_LoadLibraryA(LPCSTR lpLibFileName);
 HMODULE WINAPI fake_LoadLibraryW(LPCWSTR lpLibFileName);
@@ -60,6 +82,9 @@ BOOL WINAPI fake_GetDiskFreeSpaceA(
     LPDWORD lpNumberOfFreeClusters,
     LPDWORD lpTotalNumberOfClusters);
 
+DWORD WINAPI fake_GetVersion(void);
+BOOL WINAPI fake_GetVersionExA(LPOSVERSIONINFOA lpVersionInformation);
+
 HWND WINAPI fake_CreateWindowExA(
     DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y,
     int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
@@ -67,7 +92,11 @@ HWND WINAPI fake_CreateWindowExA(
 HRESULT WINAPI fake_CoCreateInstance(
     REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID* ppv);
 
+MCIERROR WINAPI fake_mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR fdwCommand, DWORD_PTR dwParam);
+
 LPTOP_LEVEL_EXCEPTION_FILTER WINAPI fake_SetUnhandledExceptionFilter(
     LPTOP_LEVEL_EXCEPTION_FILTER lpTopLevelExceptionFilter);
+
+PGETFRAME WINAPI fake_AVIStreamGetFrameOpen(PAVISTREAM pavi, LPBITMAPINFOHEADER lpbiWanted);
 
 #endif

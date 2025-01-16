@@ -2677,7 +2677,7 @@ object ConfigForm: TConfigForm
     61C0650530766087F0B9DE67A1EF3B173173597F3B695CC608E0B202F8FC22D7
     BBBF4CD8CBB88CCBB88CCBB88CCBB88CCBB88CCBB88CCBB88CCBB88CCBB88CCB
     B88CB18EFF1FA2974C1C31AF16A40000000049454E44AE426082}
-  Position = poDesktopCenter
+  Position = poScreenCenter
   OnActivate = FormActivate
   OnCreate = FormCreate
   DesignSize = (
@@ -2696,8 +2696,6 @@ object ConfigForm: TConfigForm
     ShowCaption = False
     TabOrder = 1
     StyleElements = [seFont, seBorder]
-    ExplicitWidth = 495
-    ExplicitHeight = 464
     DesignSize = (
       499
       465)
@@ -2727,6 +2725,8 @@ object ConfigForm: TConfigForm
       Font.Name = 'Segoe UI'
       Font.Style = []
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
     end
     object VsyncLbl: TLabel
       Left = 40
@@ -2755,6 +2755,8 @@ object ConfigForm: TConfigForm
       Font.Name = 'Segoe UI'
       Font.Style = []
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
     end
     object DevmodeLbl: TLabel
       Left = 40
@@ -2834,6 +2836,8 @@ object ConfigForm: TConfigForm
       Top = 132
       Width = 50
       Height = 20
+      ParentShowHint = False
+      ShowHint = True
       ShowStateCaption = False
       TabOrder = 0
       OnClick = MaintasChkClick
@@ -2852,6 +2856,8 @@ object ConfigForm: TConfigForm
       Top = 268
       Width = 50
       Height = 20
+      ParentShowHint = False
+      ShowHint = True
       ShowStateCaption = False
       TabOrder = 3
       OnClick = AdjmouseChkClick
@@ -2877,7 +2883,6 @@ object ConfigForm: TConfigForm
       TabOrder = 5
       StyleElements = [seFont, seBorder]
       OnClick = ThemePnlClick
-      ExplicitLeft = 471
     end
   end
   object CompatibilityPnl: TPanel
@@ -2893,8 +2898,6 @@ object ConfigForm: TConfigForm
     TabOrder = 3
     Visible = False
     StyleElements = [seFont, seBorder]
-    ExplicitWidth = 495
-    ExplicitHeight = 464
     object MaxgameticksLbl: TLabel
       Left = 40
       Top = 28
@@ -3075,8 +3078,6 @@ object ConfigForm: TConfigForm
     TabOrder = 2
     Visible = False
     StyleElements = [seFont, seBorder]
-    ExplicitWidth = 495
-    ExplicitHeight = 464
     object RendererLbl: TLabel
       Left = 40
       Top = 28
@@ -3117,6 +3118,8 @@ object ConfigForm: TConfigForm
       Font.Name = 'Segoe UI'
       Font.Style = []
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
     end
     object MaxfpsLbl: TLabel
       Left = 40
@@ -3159,6 +3162,8 @@ object ConfigForm: TConfigForm
       Font.Name = 'Segoe UI'
       Font.Style = []
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
     end
     object RendererPbox: TPaintBox
       Left = 40
@@ -3190,6 +3195,8 @@ object ConfigForm: TConfigForm
       Font.Name = 'Segoe UI'
       Font.Style = []
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
       TabOrder = 6
       Visible = False
       OnChange = ShaderD3DCbxChange
@@ -3249,13 +3256,15 @@ object ConfigForm: TConfigForm
       BevelInner = bvNone
       BevelOuter = bvSpace
       Style = csDropDownList
-      DropDownCount = 10
+      DropDownCount = 13
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
       Font.Height = -16
       Font.Name = 'Segoe UI'
       Font.Style = []
       ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
       TabOrder = 3
       OnChange = ShaderCbxChange
     end
@@ -3273,6 +3282,8 @@ object ConfigForm: TConfigForm
       Top = 277
       Width = 50
       Height = 20
+      ParentShowHint = False
+      ShowHint = True
       ShowStateCaption = False
       TabOrder = 5
       OnClick = BoxingChkClick
@@ -3291,8 +3302,6 @@ object ConfigForm: TConfigForm
     TabOrder = 4
     Visible = False
     StyleElements = [seFont, seBorder]
-    ExplicitWidth = 495
-    ExplicitHeight = 464
     object ToggleWindowedLbl: TLabel
       Left = 40
       Top = 27
@@ -3520,7 +3529,6 @@ object ConfigForm: TConfigForm
     Color = clMenu
     ParentBackground = False
     TabOrder = 0
-    ExplicitHeight = 467
     DesignSize = (
       233
       468)

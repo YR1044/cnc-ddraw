@@ -518,7 +518,7 @@ void blt_colorfill(
     if (bpp == 8 ||
         (bpp == 16 && 
             (color & 0xFF) == ((color >> 8) & 0xFF)) ||
-        (bpp == 32 &&
+        ((bpp == 32 || bpp == 24) &&
             (color & 0xFF) == ((color >> 8) & 0xFF) &&
             (color & 0xFF) == ((color >> 16) & 0xFF) &&
             (color & 0xFF) == ((color >> 24) & 0xFF)))

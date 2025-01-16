@@ -9,6 +9,11 @@
 #include "IDirectDraw.h"
 
 
+typedef struct DDBITMAPINFO{
+    BITMAPINFOHEADER bmiHeader;
+    RGBQUAD bmiColors[256];
+} DDBITMAPINFO;
+
 struct IDirectDrawSurfaceImpl;
 struct IDirectDrawSurfaceImplVtbl;
 
@@ -18,9 +23,9 @@ typedef struct IDirectDrawSurfaceImpl
 
     ULONG ref;
 
+    DWORD bpp;
     DWORD width;
     DWORD height;
-    DWORD bpp;
     DWORD size;
     DWORD flags;
     DWORD caps;
@@ -28,6 +33,8 @@ typedef struct IDirectDrawSurfaceImpl
     CRITICAL_SECTION cs;
 
     IDirectDrawPaletteImpl* palette;
+    PALETTEENTRY selected_pal[256];
+    UINT selected_pal_count;
 
     void* surface;
     HANDLE mapping;
@@ -38,6 +45,7 @@ typedef struct IDirectDrawSurfaceImpl
     PBITMAPINFO bmi;
     HBITMAP bitmap;
     HDC hdc;
+    int dc_state;
     DDCOLORKEY color_key;
     DWORD last_flip_tick;
     DWORD last_blt_tick;

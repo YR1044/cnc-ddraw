@@ -15,15 +15,16 @@ typedef HRESULT(WINAPI* DIRECTDRAWCREATEPROC)(GUID FAR*, LPDIRECTDRAW FAR*, IUnk
 ULONG dd_AddRef();
 ULONG dd_Release();
 HRESULT dd_EnumDisplayModes(DWORD dwFlags, LPDDSURFACEDESC lpDDSurfaceDesc, LPVOID lpContext, LPDDENUMMODESCALLBACK lpEnumModesCallback);
-HRESULT dd_WaitForVerticalBlank(DWORD dwFlags, HANDLE hEvent);
-HRESULT dd_SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwFlags);
-HRESULT dd_SetCooperativeLevel(HWND hwnd, DWORD dwFlags);
-HRESULT dd_RestoreDisplayMode();
 HRESULT dd_GetCaps(LPDDCAPS_DX1 lpDDDriverCaps, LPDDCAPS_DX1 lpDDEmulCaps);
 HRESULT dd_GetDisplayMode(LPDDSURFACEDESC lpDDSurfaceDesc);
 HRESULT dd_GetMonitorFrequency(LPDWORD lpdwFreq);
-HRESULT dd_GetAvailableVidMem(LPDDSCAPS lpDDCaps, LPDWORD lpdwTotal, LPDWORD lpdwFree);
 HRESULT dd_GetVerticalBlankStatus(LPBOOL lpbIsInVB);
+HRESULT dd_RestoreDisplayMode();
+HRESULT dd_SetCooperativeLevel(HWND hwnd, DWORD dwFlags);
+HRESULT dd_SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwFlags);
+HRESULT dd_WaitForVerticalBlank(DWORD dwFlags, HANDLE hEvent);
+HRESULT dd_GetAvailableVidMem(LPDDSCAPS lpDDCaps, LPDWORD lpdwTotal, LPDWORD lpdwFree);
+HRESULT dd_TestCooperativeLevel();
 HRESULT dd_GetDeviceIdentifier(LPDDDEVICEIDENTIFIER pDDDI, DWORD dwFlags, REFIID riid);
 HRESULT dd_CreateEx(GUID* lpGuid, LPVOID* lplpDD, REFIID iid, IUnknown* pUnkOuter);
 
@@ -31,6 +32,7 @@ HRESULT dd_CreateEx(GUID* lpGuid, LPVOID* lplpDD, REFIID iid, IUnknown* pUnkOute
 #define FIX_CHILDS_DETECT 1
 #define FIX_CHILDS_DETECT_PAINT 2
 #define FIX_CHILDS_DETECT_HIDE 3
+#define FIX_CHILDS_DETECT_HIDE_NOSCALE 4
 
 #define RESLIST_NORMAL 0
 #define RESLIST_MINI 1
@@ -45,22 +47,52 @@ HRESULT dd_CreateEx(GUID* lpGuid, LPVOID* lplpDD, REFIID iid, IUnknown* pUnkOute
 #define SDM_LEAVE_WINDOWED   0x00000002l
 #define SDM_LEAVE_FULLSCREEN 0x00000004l
 
+#define LIMIT_AUTO 0
+#define LIMIT_TESTCOOP 1
+#define LIMIT_BLTFAST 2
+#define LIMIT_UNLOCK 3
+#define LIMIT_PEEKMESSAGE 4
+
+#define CENTER_WINDOW_NEVER 0
+#define CENTER_WINDOW_AUTO 1
+#define CENTER_WINDOW_ALWAYS 2
+
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
+
+#ifndef CREATE_WAITABLE_TIMER_MANUAL_RESET
+#define CREATE_WAITABLE_TIMER_MANUAL_RESET 0x00000001
+#endif
+
+#ifndef GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT
+#define GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT 0x00000002
+#endif
+
+#ifndef GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+#define GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS 0x00000004
+#endif
+
+#if (_WIN32_WINNT < _WIN32_WINNT_WIN2K)
+#define GdiTransparentBlt TransparentBlt 
+#endif
+
 typedef struct SPEEDLIMITER
 {
     DWORD tick_length;
     LONGLONG tick_length_ns;
     HANDLE htimer;
     LARGE_INTEGER due_time;
-    BOOL use_blt_or_flip;
+    BOOL dds_unlock_limiter_disabled;
 } SPEEDLIMITER;
 
 struct IDirectDrawSurfaceImpl;
 
-extern struct CNCDDRAW* g_ddraw;
+extern struct CNCDDRAW g_ddraw;
 
 typedef struct CNCDDRAW
 {
-    ULONG ref;
+    LONG ref;
 
     DWORD width;
     DWORD height;
@@ -95,6 +127,7 @@ typedef struct CNCDDRAW
         LONG palette_updated;
         LONG surface_updated;
         LONG clear_screen;
+        LONG screen_updated;
 
         float scale_w;
         float scale_h;
@@ -123,6 +156,7 @@ typedef struct CNCDDRAW
     BOOL isredalert;
     BOOL iscnc1;
     BOOL iskkndx;
+    BOOL isworms2;
     LONG upscale_hack_active;
     HCURSOR old_cursor;
     int show_cursor_count;
@@ -135,17 +169,27 @@ typedef struct CNCDDRAW
     void* last_freed_palette; /* Dungeon Keeper hack */
     void* last_freed_surface; /* Nox hack */
     BOOL child_window_exists;
-    HWND video_window_hwnd;
     BOOL got_child_windows;
     DWORD last_set_window_pos_tick; /* WINE hack */
+    DWORD last_msg_pull_tick;
     SPEEDLIMITER ticks_limiter;
     SPEEDLIMITER flip_limiter;
     DWORD minfps_tick_len;
     DWORD gui_thread_id;
     BOOL show_driver_warning;
-    BOOL d3d9on12;
-    BOOL opengl_core;
+    BOOL windowed_hack;
 
+    struct
+    {
+        HWND hwnd;
+        int x;
+        int y;
+    } textbox; /* Age Of Empires 2 textbox align */
+
+    struct
+    {
+        BOOL enabled;
+    } zoom;
 } CNCDDRAW;
 
 #endif

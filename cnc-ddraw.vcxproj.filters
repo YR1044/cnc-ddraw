@@ -159,6 +159,18 @@
     <ClCompile Include="src\ini.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\versionhelpers.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\indeo.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\keyboard.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\delay_imports.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\debug.h">
@@ -275,9 +287,27 @@
     <ClInclude Include="inc\ini.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="inc\versionhelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\indeo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\keyboard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\palette.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\d3dcaps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\delay_imports.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ddraw.rc">
+    <ResourceCompile Include="res.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

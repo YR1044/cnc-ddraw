@@ -14,11 +14,15 @@ HRESULT ddp_GetEntries(
     DWORD dwNumEntries,
     LPPALETTEENTRY lpEntries)
 {
-    for (int i = dwBase, x = 0; i < dwBase + dwNumEntries; i++, x++)
+    if (!lpEntries)
+        return DDERR_INVALIDPARAMS;
+
+    for (int i = dwBase, x = 0; i < dwBase + dwNumEntries && i < 256; i++, x++)
     {
         lpEntries[x].peRed = This->data_rgb[i].rgbRed;
         lpEntries[x].peGreen = This->data_rgb[i].rgbGreen;
         lpEntries[x].peBlue = This->data_rgb[i].rgbBlue;
+        lpEntries[x].peFlags = 0;
     }
 
     return DD_OK;
@@ -31,7 +35,17 @@ HRESULT ddp_SetEntries(
     DWORD dwCount,
     LPPALETTEENTRY lpEntries)
 {
-    for (int i = dwStartingEntry, x = 0; i < dwStartingEntry + dwCount; i++, x++)
+    if (!lpEntries)
+        return DDERR_INVALIDPARAMS;
+
+    RGBQUAD data_rgb[256];
+
+    if ((dwFlags & DDPCAPS_REFRESH_CHANGED_ONLY))
+    {
+        memcpy(data_rgb, This->data_rgb, sizeof(This->data_rgb));
+    }
+
+    for (int i = dwStartingEntry, x = 0; i < dwStartingEntry + dwCount && i < 256; i++, x++)
     {
         This->data_bgr[i] = (lpEntries[x].peBlue << 16) | (lpEntries[x].peGreen << 8) | lpEntries[x].peRed;
 
@@ -57,10 +71,21 @@ HRESULT ddp_SetEntries(
         This->data_rgb[255].rgbReserved = 0;
     }
 
-    if (g_ddraw && g_ddraw->primary && g_ddraw->primary->palette == This && g_ddraw->render.run)
+    if ((dwFlags & DDPCAPS_REFRESH_CHANGED_ONLY))
     {
-        InterlockedExchange(&g_ddraw->render.palette_updated, TRUE);
-        ReleaseSemaphore(g_ddraw->render.sem, 1, NULL);
+        if (memcmp(data_rgb, This->data_rgb, sizeof(This->data_rgb)) == 0)
+        {
+            // do not set palette_updated BOOL if nothing changed
+            return DD_OK;
+        }
+
+        TRACE_EXT("     Palette changed\n");
+    }
+
+    if (g_ddraw.ref && g_ddraw.primary && g_ddraw.primary->palette == This && g_ddraw.render.run)
+    {
+        InterlockedExchange(&g_ddraw.render.palette_updated, TRUE);
+        ReleaseSemaphore(g_ddraw.render.sem, 1, NULL);
     }
 
     return DD_OK;

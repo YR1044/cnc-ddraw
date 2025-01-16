@@ -1,20 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="DebugLogMini|Win32">
-      <Configuration>DebugLogMini</Configuration>
+    <ProjectConfiguration Include="DebugLogMiniXP|Win32">
+      <Configuration>DebugLogMiniXP</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="DebugLog|Win32">
-      <Configuration>DebugLog</Configuration>
+    <ProjectConfiguration Include="DebugLogXP|Win32">
+      <Configuration>DebugLogXP</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="ReleaseWin2000|Win32">
-      <Configuration>ReleaseWin2000</Configuration>
+    <ProjectConfiguration Include="ReleaseXP|Win32">
+      <Configuration>ReleaseXP</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
@@ -27,6 +27,7 @@
     <ClCompile Include="src\crc32.c" />
     <ClCompile Include="src\ddclipper.c" />
     <ClCompile Include="src\debug.c" />
+    <ClCompile Include="src\delay_imports.c" />
     <ClCompile Include="src\detours\creatwth.cpp" />
     <ClCompile Include="src\detours\detours.cpp" />
     <ClCompile Include="src\detours\disasm.cpp" />
@@ -49,7 +50,9 @@
     <ClCompile Include="src\IDirect3D\IDirect3D7.c" />
     <ClCompile Include="src\IAMMediaStream\IAMMediaStream.c" />
     <ClCompile Include="src\IDirectDraw\IDirectDrawGammaControl.c" />
+    <ClCompile Include="src\indeo.c" />
     <ClCompile Include="src\ini.c" />
+    <ClCompile Include="src\keyboard.c" />
     <ClCompile Include="src\utils.c" />
     <ClCompile Include="src\hook.c" />
     <ClCompile Include="src\IDirectDraw\IDirectDraw.c" />
@@ -67,6 +70,7 @@
     <ClCompile Include="src\screenshot.c" />
     <ClCompile Include="src\config.c" />
     <ClCompile Include="src\ddsurface.c" />
+    <ClCompile Include="src\versionhelpers.c" />
     <ClCompile Include="src\winapi_hooks.c" />
     <ClCompile Include="src\wndproc.c" />
   </ItemGroup>
@@ -74,8 +78,10 @@
     <ClInclude Include="inc\blt.h" />
     <ClInclude Include="inc\crc32.h" />
     <ClInclude Include="inc\d3d9shader.h" />
+    <ClInclude Include="inc\d3dcaps.h" />
     <ClInclude Include="inc\ddclipper.h" />
     <ClInclude Include="inc\ddraw.h" />
+    <ClInclude Include="inc\delay_imports.h" />
     <ClInclude Include="inc\directinput.h" />
     <ClInclude Include="inc\dllmain.h" />
     <ClInclude Include="inc\fps_limiter.h" />
@@ -83,7 +89,10 @@
     <ClInclude Include="inc\IDirect3D.h" />
     <ClInclude Include="inc\IAMMediaStream.h" />
     <ClInclude Include="inc\IDirectDrawGammaControl.h" />
+    <ClInclude Include="inc\indeo.h" />
     <ClInclude Include="inc\ini.h" />
+    <ClInclude Include="inc\keyboard.h" />
+    <ClInclude Include="inc\palette.h" />
     <ClInclude Include="inc\patch.h" />
     <ClInclude Include="inc\utils.h" />
     <ClInclude Include="inc\hook.h" />
@@ -106,50 +115,49 @@
     <ClInclude Include="inc\config.h" />
     <ClInclude Include="inc\ddsurface.h" />
     <ClInclude Include="inc\version.h" />
+    <ClInclude Include="inc\versionhelpers.h" />
     <ClInclude Include="inc\wglext.h" />
     <ClInclude Include="inc\winapi_hooks.h" />
     <ClInclude Include="inc\wndproc.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ddraw.rc" />
+    <ResourceCompile Include="res.rc" />
   </ItemGroup>
-  <ItemGroup>
-    <MASM Condition="'$(Configuration)|$(Platform)'=='ReleaseWin2000|Win32'" Include="src\win2000.asm" />
-  </ItemGroup>
+  <ItemGroup />
   <PropertyGroup Label="Globals">
     <RootNamespace>cnc_ddraw</RootNamespace>
-    <WindowsTargetPlatformVersion>7.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion)' == ''">$([Microsoft.Build.Utilities.ToolLocationHelper]::GetLatestSDKTargetPlatformVersion('Windows', '10.0'))</WindowsTargetPlatformVersion>
     <ProjectGuid>{96094551-5D52-4EBD-BE4C-5291A03507FC}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141_xp</PlatformToolset>
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWin2000|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLog|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogXP|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141_xp</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMini|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMiniXP|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141_xp</PlatformToolset>
@@ -157,9 +165,7 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings">
-    <Import Condition="'$(Configuration)|$(Platform)'=='ReleaseWin2000|Win32'" Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
-  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -168,13 +174,13 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWin2000|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugLog|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogXP|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMini|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMiniXP|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -190,21 +196,21 @@
     <LinkIncremental>false</LinkIncremental>
     <TargetName>ddraw</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWin2000|Win32'">
-    <OutDir>$(SolutionDir)bin\ReleaseWin2000\</OutDir>
-    <IntDir>$(SolutionDir)bin\ReleaseWin2000\</IntDir>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">
+    <OutDir>$(SolutionDir)bin\ReleaseXP\</OutDir>
+    <IntDir>$(SolutionDir)bin\ReleaseXP\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>ddraw</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLog|Win32'">
-    <OutDir>$(SolutionDir)bin\DebugLog\</OutDir>
-    <IntDir>$(SolutionDir)bin\DebugLog\</IntDir>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogXP|Win32'">
+    <OutDir>$(SolutionDir)bin\DebugLogXP\</OutDir>
+    <IntDir>$(SolutionDir)bin\DebugLogXP\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>ddraw</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMini|Win32'">
-    <OutDir>$(SolutionDir)bin\DebugLogMini\</OutDir>
-    <IntDir>$(SolutionDir)bin\DebugLogMini\</IntDir>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMiniXP|Win32'">
+    <OutDir>$(SolutionDir)bin\DebugLogMiniXP\</OutDir>
+    <IntDir>$(SolutionDir)bin\DebugLogMiniXP\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>ddraw</TargetName>
   </PropertyGroup>
@@ -214,22 +220,37 @@
       </PrecompiledHeader>
       <WarningLevel>Level2</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;_DEBUG_X;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>inc;src\detours</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>dbghelp.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>ddraw.def</ModuleDefinitionFile>
+      <AdditionalDependencies>avifil32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>
-if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  (
+if NOT "$(LocalDebuggerWorkingDirectory)" == "$(ProjectDir)" if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  (
     copy "$(TargetPath)" "$(LocalDebuggerWorkingDirectory)$(TargetFileName)"
 )
 </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+set DST_FILE="inc/git.h"
+set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw64\bin\git.exe"
+
+if not exist %GIT_PATH% set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw32\bin\git.exe"
+if not exist %GIT_PATH% set GIT_PATH=git.exe
+
+for /f "tokens=*" %%I in ('%GIT_PATH% describe --match=NeVeRmAtCh --always --dirty ^|^| echo UNKNOWN') do set GIT_COMMIT=%%I
+for /f "tokens=*" %%I in ('%GIT_PATH% rev-parse --abbrev-ref HEAD ^|^| echo UNKNOWN') do set GIT_BRANCH=%%I
+
+echo #define GIT_COMMIT "%GIT_COMMIT%" &gt; %DST_FILE%
+echo #define GIT_BRANCH "%GIT_BRANCH%" &gt;&gt; %DST_FILE%
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -247,18 +268,33 @@ if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>ddraw.def</ModuleDefinitionFile>
+      <AdditionalDependencies>avifil32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>
-if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  (
+if NOT "$(LocalDebuggerWorkingDirectory)" == "$(ProjectDir)" if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  (
     copy "$(TargetPath)" "$(LocalDebuggerWorkingDirectory)$(TargetFileName)"
 )
 </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+set DST_FILE="inc/git.h"
+set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw64\bin\git.exe"
+
+if not exist %GIT_PATH% set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw32\bin\git.exe"
+if not exist %GIT_PATH% set GIT_PATH=git.exe
+
+for /f "tokens=*" %%I in ('%GIT_PATH% describe --match=NeVeRmAtCh --always --dirty ^|^| echo UNKNOWN') do set GIT_COMMIT=%%I
+for /f "tokens=*" %%I in ('%GIT_PATH% rev-parse --abbrev-ref HEAD ^|^| echo UNKNOWN') do set GIT_BRANCH=%%I
+
+echo #define GIT_COMMIT "%GIT_COMMIT%" &gt; %DST_FILE%
+echo #define GIT_BRANCH "%GIT_BRANCH%" &gt;&gt; %DST_FILE%
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWin2000|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">
     <ClCompile>
       <WarningLevel>Level2</WarningLevel>
       <PrecompiledHeader>
@@ -269,27 +305,38 @@ if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>inc;src\detours</AdditionalIncludeDirectories>
-      <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>ddraw.def</ModuleDefinitionFile>
+      <AdditionalDependencies>avifil32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>
-if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  (
+if NOT "$(LocalDebuggerWorkingDirectory)" == "$(ProjectDir)" if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  (
     copy "$(TargetPath)" "$(LocalDebuggerWorkingDirectory)$(TargetFileName)"
 )
 </Command>
     </PostBuildEvent>
-    <MASM>
-      <AdditionalOptions>/safeseh %(AdditionalOptions)</AdditionalOptions>
-    </MASM>
+    <PreBuildEvent>
+      <Command>
+set DST_FILE="inc/git.h"
+set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw64\bin\git.exe"
+
+if not exist %GIT_PATH% set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw32\bin\git.exe"
+if not exist %GIT_PATH% set GIT_PATH=git.exe
+
+for /f "tokens=*" %%I in ('%GIT_PATH% describe --match=NeVeRmAtCh --always --dirty ^|^| echo UNKNOWN') do set GIT_COMMIT=%%I
+for /f "tokens=*" %%I in ('%GIT_PATH% rev-parse --abbrev-ref HEAD ^|^| echo UNKNOWN') do set GIT_BRANCH=%%I
+
+echo #define GIT_COMMIT "%GIT_COMMIT%" &gt; %DST_FILE%
+echo #define GIT_BRANCH "%GIT_BRANCH%" &gt;&gt; %DST_FILE%
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLog|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogXP|Win32'">
     <ClCompile>
       <WarningLevel>Level2</WarningLevel>
       <PrecompiledHeader>
@@ -305,8 +352,8 @@ if exist "$(LocalDebuggerCommand)" if exist "$(LocalDebuggerWorkingDirectory)"  
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>dbghelp.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>ddraw.def</ModuleDefinitionFile>
+      <AdditionalDependencies>avifil32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -315,8 +362,23 @@ if NOT "$(LocalDebuggerWorkingDirectory)" == "$(ProjectDir)" if exist "$(LocalDe
 )
 </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+set DST_FILE="inc/git.h"
+set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw64\bin\git.exe"
+
+if not exist %GIT_PATH% set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw32\bin\git.exe"
+if not exist %GIT_PATH% set GIT_PATH=git.exe
+
+for /f "tokens=*" %%I in ('%GIT_PATH% describe --match=NeVeRmAtCh --always --dirty ^|^| echo UNKNOWN') do set GIT_COMMIT=%%I
+for /f "tokens=*" %%I in ('%GIT_PATH% rev-parse --abbrev-ref HEAD ^|^| echo UNKNOWN') do set GIT_BRANCH=%%I
+
+echo #define GIT_COMMIT "%GIT_COMMIT%" &gt; %DST_FILE%
+echo #define GIT_BRANCH "%GIT_BRANCH%" &gt;&gt; %DST_FILE%
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMini|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugLogMiniXP|Win32'">
     <ClCompile>
       <WarningLevel>Level2</WarningLevel>
       <PrecompiledHeader>
@@ -332,8 +394,8 @@ if NOT "$(LocalDebuggerWorkingDirectory)" == "$(ProjectDir)" if exist "$(LocalDe
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>dbghelp.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <ModuleDefinitionFile>ddraw.def</ModuleDefinitionFile>
+      <AdditionalDependencies>avifil32.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>exports.def</ModuleDefinitionFile>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -342,9 +404,22 @@ if NOT "$(LocalDebuggerWorkingDirectory)" == "$(ProjectDir)" if exist "$(LocalDe
 )
 </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+set DST_FILE="inc/git.h"
+set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw64\bin\git.exe"
+
+if not exist %GIT_PATH% set GIT_PATH="$(DevEnvDir)\CommonExtensions\Microsoft\TeamFoundation\Team Explorer\Git\mingw32\bin\git.exe"
+if not exist %GIT_PATH% set GIT_PATH=git.exe
+
+for /f "tokens=*" %%I in ('%GIT_PATH% describe --match=NeVeRmAtCh --always --dirty ^|^| echo UNKNOWN') do set GIT_COMMIT=%%I
+for /f "tokens=*" %%I in ('%GIT_PATH% rev-parse --abbrev-ref HEAD ^|^| echo UNKNOWN') do set GIT_BRANCH=%%I
+
+echo #define GIT_COMMIT "%GIT_COMMIT%" &gt; %DST_FILE%
+echo #define GIT_BRANCH "%GIT_BRANCH%" &gt;&gt; %DST_FILE%
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Condition="'$(Configuration)|$(Platform)'=='ReleaseWin2000|Win32'" Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
 </Project>

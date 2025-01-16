@@ -1,6 +1,9 @@
 #include <windows.h>
 #include <dbghelp.h>
 #include <stdio.h>
+#include <d3d9.h>
+#include <time.h>
+#include "directinput.h"
 #include "ddraw.h"
 #include "dd.h"
 #include "ddsurface.h"
@@ -8,54 +11,78 @@
 #include "debug.h"
 #include "hook.h"
 #include "version.h"
+#include "git.h"
+#include "versionhelpers.h"
+#include "utils.h"
+#include "crc32.h"
+#include "dllmain.h"
+#include "config.h"
+#include "delay_imports.h"
 
 
 double g_dbg_frame_time = 0;
 DWORD g_dbg_frame_count = 0;
 LPTOP_LEVEL_EXCEPTION_FILTER g_dbg_exception_filter;
+PVOID g_dbg_exception_handle;
 
 static LONGLONG g_dbg_counter_start_time = 0;
 static double g_dbg_counter_freq = 0.0;
 static FILE* g_dbg_log_file;
+static char g_dbg_log_path1[MAX_PATH] = "cnc-ddraw-1.log";
+static char g_dbg_log_path2[MAX_PATH] = "cnc-ddraw-2.log";
+static char g_dbg_log_path3[MAX_PATH] = "cnc-ddraw-3.log";
+static char g_dbg_dmp_path1[MAX_PATH] = "cnc-ddraw-1.dmp";
+static char g_dbg_dmp_path2[MAX_PATH] = "cnc-ddraw-2.dmp";
 static BOOL g_dbg_log_rotate;
 
 #ifdef _DEBUG 
 static int g_dbg_crash_count = 0;
 
-int dbg_exception_handler(EXCEPTION_POINTERS* exception)
+LONG WINAPI dbg_exception_handler(EXCEPTION_POINTERS* exception)
 {
     g_dbg_crash_count++;
 
-    char filename[MAX_PATH] = { 0 };
-    _snprintf(filename, sizeof(filename) - 1, "cnc-ddraw-%d.dmp", g_dbg_crash_count == 1 ? 1 : 2);
+    BOOL(WINAPI * MiniDumpWriteDumpProc)(
+        HANDLE,
+        DWORD,
+        HANDLE,
+        MINIDUMP_TYPE,
+        PMINIDUMP_EXCEPTION_INFORMATION,
+        PMINIDUMP_USER_STREAM_INFORMATION,
+        PMINIDUMP_CALLBACK_INFORMATION
+        );
 
-    HANDLE dmp =
-        CreateFile(
-            filename,
-            GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_WRITE | FILE_SHARE_READ,
-            0,
-            CREATE_ALWAYS,
-            0,
-            0);
-
-    if (dmp != INVALID_HANDLE_VALUE)
+    MiniDumpWriteDumpProc = (void*)real_GetProcAddress(real_LoadLibraryA("Dbghelp.dll"), "MiniDumpWriteDump");
+    if (MiniDumpWriteDumpProc)
     {
-        MINIDUMP_EXCEPTION_INFORMATION info;
-        info.ThreadId = GetCurrentThreadId();
-        info.ExceptionPointers = exception;
-        info.ClientPointers = TRUE;
+        HANDLE dmp =
+            CreateFile(
+                g_dbg_crash_count == 1 ? g_dbg_dmp_path1 : g_dbg_dmp_path2,
+                GENERIC_READ | GENERIC_WRITE,
+                FILE_SHARE_WRITE | FILE_SHARE_READ,
+                0,
+                CREATE_ALWAYS,
+                0,
+                0);
 
-        MiniDumpWriteDump(
-            GetCurrentProcess(),
-            GetCurrentProcessId(),
-            dmp,
-            0,
-            &info,
-            NULL,
-            NULL);
+        if (dmp != INVALID_HANDLE_VALUE)
+        {
+            MINIDUMP_EXCEPTION_INFORMATION info;
+            info.ThreadId = GetCurrentThreadId();
+            info.ExceptionPointers = exception;
+            info.ClientPointers = TRUE;
 
-        CloseHandle(dmp);
+            MiniDumpWriteDumpProc(
+                GetCurrentProcess(),
+                GetCurrentProcessId(),
+                dmp,
+                0,
+                &info,
+                NULL,
+                NULL);
+
+            CloseHandle(dmp);
+        }
     }
 
     if (exception && exception->ExceptionRecord)
@@ -63,7 +90,7 @@ int dbg_exception_handler(EXCEPTION_POINTERS* exception)
         HMODULE mod = NULL;
         char filename[MAX_PATH] = { 0 };
 
-        if (GetModuleHandleExA(
+        if (delay_GetModuleHandleExA && delay_GetModuleHandleExA(
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             exception->ExceptionRecord->ExceptionAddress,
             &mod))
@@ -85,7 +112,65 @@ int dbg_exception_handler(EXCEPTION_POINTERS* exception)
 
     return EXCEPTION_EXECUTE_HANDLER;
 }
+
+void __cdecl dbg_invoke_watson(
+    wchar_t const* const expression,
+    wchar_t const* const function_name,
+    wchar_t const* const file_name,
+    unsigned int   const line_number,
+    uintptr_t      const reserved
+)
+{
+    TRACE("%s [%p]\n", __FUNCTION__, _ReturnAddress());
+
+    /* Force access violation to produce a dmp file for debugging */
+    *(int*)0 = 0;
+
+    TerminateProcess(GetCurrentProcess(), STATUS_INVALID_CRUNTIME_PARAMETER);
+}
 #endif
+
+LONG WINAPI dbg_vectored_exception_handler(EXCEPTION_POINTERS* exception)
+{
+    if (exception &&
+        exception->ContextRecord &&
+        exception->ExceptionRecord &&
+        exception->ExceptionRecord->ExceptionAddress &&
+        exception->ExceptionRecord->ExceptionCode == STATUS_PRIVILEGED_INSTRUCTION)
+    {
+        size_t size = 0;
+        BYTE* addr = exception->ExceptionRecord->ExceptionAddress;
+        switch (*addr)
+        {
+        case 0xE4: // IN ib
+        case 0xE5: // IN id
+        case 0xE6: // OUT ib
+        case 0xE7: // OUT ib
+            size = 2;
+            break;
+        case 0xF8: // CLC
+        case 0xF9: // STC
+        case 0xFA: // CLI
+        case 0xFB: // STI
+        case 0xFC: // CLD
+        case 0xFD: // STD
+        case 0xEC: // IN ib
+        case 0xED: // IN id
+        case 0xEE: // OUT
+        case 0xEF: // OUT
+            size = 1;
+            break;
+        }
+
+        if (size)
+        {
+            exception->ContextRecord->Eip += size;
+            return EXCEPTION_CONTINUE_EXECUTION;
+        }
+    }
+
+    return EXCEPTION_CONTINUE_SEARCH;
+}
 
 void dbg_init()
 {
@@ -95,60 +180,106 @@ void dbg_init()
     {
         once = TRUE;
 
-        remove("cnc-ddraw-1.dmp");
-        remove("cnc-ddraw-2.dmp");
+        char exe_path[MAX_PATH] = { 0 };
+        if (GetModuleFileNameA(NULL, exe_path, sizeof(exe_path) - 1) > 0)
+        {
+            char filename[MAX_PATH] = { 0 };
+            char drive[MAX_PATH] = { 0 };
+            char dir[MAX_PATH] = { 0 };
+            _splitpath(exe_path, drive, dir, filename, NULL);
 
-        remove("cnc-ddraw-1.log");
-        remove("cnc-ddraw-2.log");
-        remove("cnc-ddraw-3.log");
+            char game_path[MAX_PATH] = { 0 };
+            _makepath(game_path, drive, dir, NULL, NULL);
 
-        g_dbg_log_file = fopen("cnc-ddraw-1.log", "w");
-        setvbuf(g_dbg_log_file, NULL, _IOLBF, 1024);
+            _snprintf(g_dbg_dmp_path1, sizeof(g_dbg_dmp_path1) - 1, "%scnc-ddraw-%s-1.dmp", game_path, filename);
+            _snprintf(g_dbg_dmp_path2, sizeof(g_dbg_dmp_path2) - 1, "%scnc-ddraw-%s-2.dmp", game_path, filename);
 
-        TRACE("cnc-ddraw version = %d.%d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_BUILD, VERSION_REVISION);
+            _snprintf(g_dbg_log_path1, sizeof(g_dbg_log_path1) - 1, "%scnc-ddraw-%s-1.log", game_path, filename);
+            _snprintf(g_dbg_log_path2, sizeof(g_dbg_log_path2) - 1, "%scnc-ddraw-%s-2.log", game_path, filename);
+            _snprintf(g_dbg_log_path3, sizeof(g_dbg_log_path3) - 1, "%scnc-ddraw-%s-3.log", game_path, filename);
+        }
 
-        HKEY hkey;
+        remove(g_dbg_dmp_path1);
+        remove(g_dbg_dmp_path2);
+
+        remove(g_dbg_log_path1);
+        remove(g_dbg_log_path2);
+        remove(g_dbg_log_path3);
+
+        g_dbg_log_file = fopen(g_dbg_log_path1, "w");
+        if (g_dbg_log_file)
+        {
+            setvbuf(g_dbg_log_file, NULL, _IOLBF, 1024);
+        }
+
+        TRACE(
+            "cnc-ddraw version = %d.%d.%d.%d (git~%s, %s)\n",
+            VERSION_MAJOR,
+            VERSION_MINOR,
+            VERSION_BUILD,
+            VERSION_REVISION,
+            GIT_COMMIT,
+            GIT_BRANCH);
+
+        TRACE("cnc-ddraw = %p\n", g_ddraw_module);
+
+        HKEY hkey = NULL;
         LONG status =
             RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0L, KEY_READ, &hkey);
 
+        HKEY hkey9x = NULL;
+        LONG status9x =
+            RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion", 0L, KEY_READ, &hkey9x);
+
+        char name[256] = { 0 };
+        DWORD name_size = sizeof(name);
+        if (status || RegQueryValueExA(hkey, "ProductName", NULL, NULL, (PVOID)&name, &name_size) != ERROR_SUCCESS)
+        {
+            if (status9x == ERROR_SUCCESS)
+                RegQueryValueExA(hkey9x, "ProductName", NULL, NULL, (PVOID)&name, &name_size);
+        }
+
+        char vers[256] = { 0 };
+        DWORD vers_size = sizeof(vers);
+        if (status || RegQueryValueExA(hkey, "DisplayVersion", NULL, NULL, (PVOID)&vers, &vers_size) != ERROR_SUCCESS)
+        {
+            if (status9x == ERROR_SUCCESS)
+                RegQueryValueExA(hkey9x, "VersionNumber", NULL, NULL, (PVOID)&vers, &vers_size);
+        }
+
+        char build[256] = { 0 };
+        DWORD build_size = sizeof(build);
+        if (status || RegQueryValueExA(hkey, "BuildLabEx", NULL, NULL, (PVOID)&build, &build_size) != ERROR_SUCCESS)
+        {
+            if (status == ERROR_SUCCESS)
+                RegQueryValueExA(hkey, "BuildLab", NULL, NULL, (PVOID)&build, &build_size);
+        }
+
+        TRACE("%s %s (%s)\n", name, vers, build);
+
         if (status == ERROR_SUCCESS)
-        {
-            char name[256] = { 0 };
-            DWORD name_size = sizeof(name);
-            RegQueryValueExA(hkey, "ProductName", NULL, NULL, (PVOID)&name, &name_size);
-
-            char dversion[256] = { 0 };
-            DWORD dversion_size = sizeof(dversion);
-            RegQueryValueExA(hkey, "DisplayVersion", NULL, NULL, (PVOID)&dversion, &dversion_size);
-
-            char build[256] = { 0 };
-            DWORD build_size = sizeof(build);
-            RegQueryValueExA(hkey, "BuildLab", NULL, NULL, (PVOID)&build, &build_size);
-
-            TRACE("%s %s (%s)\n", name, dversion, build);
-
             RegCloseKey(hkey);
-        }
 
-        const char* (CDECL * wine_get_version)() =
-            (void*)real_GetProcAddress(GetModuleHandleA("ntdll.dll"), "wine_get_version");
+        if (status9x == ERROR_SUCCESS)
+            RegCloseKey(hkey9x);
 
-        if (wine_get_version)
+        if (IsWine())
         {
-            TRACE("Wine version = %s\n", wine_get_version());
-        }
+            TRACE("Wine version = %s\n", verhelp_wine_get_version());
 
-        void (CDECL* wine_get_host_version)(const char** sysname, const char** release) =
-            (void*)real_GetProcAddress(GetModuleHandleA("ntdll.dll"), "wine_get_host_version");
-
-        if (wine_get_host_version)
-        {
             const char* sysname = NULL;
             const char* release = NULL;
-
-            wine_get_host_version(&sysname, &release);
+            verhelp_wine_get_host_version(&sysname, &release);
 
             TRACE("Wine sysname = %s, release = %s\n", sysname, release);
+        }
+
+        TRACE("crc32 = %08X\n", Crc32_FromFile(0, exe_path));
+
+        DWORD timestamp = util_get_timestamp(GetModuleHandleA(NULL));
+        if (timestamp)
+        {
+            TRACE("timestamp = %s", asctime(_gmtime32((const long*)&timestamp)));
         }
     }
 }
@@ -193,12 +324,15 @@ void dbg_printf(const char* fmt, ...)
 
     if (g_dbg_log_file && ftell(g_dbg_log_file) >= 1024 * 1024 * 100) /* rotate every 100MB */
     {
-        char filename[MAX_PATH] = { 0 };
-        _snprintf(filename, sizeof(filename) - 1, "cnc-ddraw-%d.log", g_dbg_log_rotate ? 3 : 2);
+        g_dbg_log_file = 
+            freopen(
+                g_dbg_log_rotate ? g_dbg_log_path3 : g_dbg_log_path2,
+                "w", 
+                g_dbg_log_file);
 
         g_dbg_log_rotate = !g_dbg_log_rotate;
 
-        if ((g_dbg_log_file = freopen(filename, "w", g_dbg_log_file)))
+        if (g_dbg_log_file)
         {
             setvbuf(g_dbg_log_file, NULL, _IOLBF, 1024);
         }
@@ -252,12 +386,12 @@ void dbg_draw_frame_info_start()
     static DWORD tick_fps = 0;
     static char debug_text[512] = { 0 };
 
-    RECT debugrc = { 0, 0, g_ddraw->width, g_ddraw->height };
+    RECT debugrc = { 0, 0, g_ddraw.width, g_ddraw.height };
 
-    if (g_ddraw->primary)
+    if (g_ddraw.primary)
     {
         HDC primary_dc;
-        dds_GetDC(g_ddraw->primary, &primary_dc);
+        dds_GetDC(g_ddraw.primary, &primary_dc);
 
         DrawText(primary_dc, debug_text, -1, &debugrc, DT_NOCLIP);
     }
@@ -285,6 +419,145 @@ void dbg_draw_frame_info_end()
 {
     if (g_dbg_frame_count == 1)
         g_dbg_frame_time = dbg_counter_stop();
+}
+
+void dbg_dump_wnd_styles(DWORD style, DWORD exstyle)
+{
+#ifdef _DEBUG
+    if (style & WS_BORDER) {
+        TRACE("     WS_BORDER\n");
+    }
+    if (style & WS_CAPTION) {
+        TRACE("     WS_CAPTION\n");
+    }
+    if (style & WS_CHILD) {
+        TRACE("     WS_CHILD\n");
+    }
+    if (style & WS_CHILDWINDOW) {
+        TRACE("     WS_CHILDWINDOW\n");
+    }
+    if (style & WS_CLIPCHILDREN) {
+        TRACE("     WS_CLIPCHILDREN\n");
+    }
+    if (style & WS_CLIPSIBLINGS) {
+        TRACE("     WS_CLIPSIBLINGS\n");
+    }
+    if (style & WS_DISABLED) {
+        TRACE("     WS_DISABLED\n");
+    }
+    if (style & WS_DLGFRAME) {
+        TRACE("     WS_DLGFRAME\n");
+    }
+    if (style & WS_GROUP) {
+        TRACE("     WS_GROUP\n");
+    }
+    if (style & WS_HSCROLL) {
+        TRACE("     WS_HSCROLL\n");
+    }
+    if (style & WS_ICONIC) {
+        TRACE("     WS_ICONIC\n");
+    }
+    if (style & WS_MAXIMIZE) {
+        TRACE("     WS_MAXIMIZE\n");
+    }
+    if (style & WS_MAXIMIZEBOX) {
+        TRACE("     WS_MAXIMIZEBOX\n");
+    }
+    if (style & WS_MINIMIZE) {
+        TRACE("     WS_MINIMIZE\n");
+    }
+    if (style & WS_MINIMIZEBOX) {
+        TRACE("     WS_MINIMIZEBOX\n");
+    }
+    if (style & WS_POPUP) {
+        TRACE("     WS_POPUP\n");
+    }
+    if (style & WS_SIZEBOX) {
+        TRACE("     WS_SIZEBOX\n");
+    }
+    if (style & WS_SYSMENU) {
+        TRACE("     WS_SYSMENU\n");
+    }
+    if (style & WS_TABSTOP) {
+        TRACE("     WS_TABSTOP\n");
+    }
+    if (style & WS_THICKFRAME) {
+        TRACE("     WS_THICKFRAME\n");
+    }
+    if (style & WS_VISIBLE) {
+        TRACE("     WS_VISIBLE\n");
+    }
+    if (style & WS_VSCROLL) {
+        TRACE("     WS_VSCROLL\n");
+    }
+
+    if (exstyle & WS_EX_ACCEPTFILES) {
+        TRACE("     WS_EX_ACCEPTFILES\n");
+    }
+    if (exstyle & WS_EX_APPWINDOW) {
+        TRACE("     WS_EX_APPWINDOW\n");
+    }
+    if (exstyle & WS_EX_CLIENTEDGE) {
+        TRACE("     WS_EX_CLIENTEDGE\n");
+    }
+    if (exstyle & WS_EX_COMPOSITED) {
+        TRACE("     WS_EX_COMPOSITED\n");
+    }
+    if (exstyle & WS_EX_CONTEXTHELP) {
+        TRACE("     WS_EX_CONTEXTHELP\n");
+    }
+    if (exstyle & WS_EX_CONTROLPARENT) {
+        TRACE("     WS_EX_CONTROLPARENT\n");
+    }
+    if (exstyle & WS_EX_DLGMODALFRAME) {
+        TRACE("     WS_EX_DLGMODALFRAME\n");
+    }
+    if (exstyle & WS_EX_LAYERED) {
+        TRACE("     WS_EX_LAYERED\n");
+    }
+    if (exstyle & WS_EX_LAYOUTRTL) {
+        TRACE("     WS_EX_LAYOUTRTL\n");
+    }
+    if (exstyle & WS_EX_LEFTSCROLLBAR) {
+        TRACE("     WS_EX_LEFTSCROLLBAR\n");
+    }
+    if (exstyle & WS_EX_MDICHILD) {
+        TRACE("     WS_EX_MDICHILD\n");
+    }
+    if (exstyle & WS_EX_NOACTIVATE) {
+        TRACE("     WS_EX_NOACTIVATE\n");
+    }
+    if (exstyle & WS_EX_NOINHERITLAYOUT) {
+        TRACE("     WS_EX_NOINHERITLAYOUT\n");
+    }
+    if (exstyle & WS_EX_NOPARENTNOTIFY) {
+        TRACE("     WS_EX_NOPARENTNOTIFY\n");
+    }
+    //if (exstyle & WS_EX_NOREDIRECTIONBITMAP) {
+    //    TRACE("     WS_EX_NOREDIRECTIONBITMAP\n");
+    //}
+    if (exstyle & WS_EX_RIGHT) {
+        TRACE("     WS_EX_RIGHT\n");
+    }
+    if (exstyle & WS_EX_RTLREADING) {
+        TRACE("     WS_EX_RTLREADING\n");
+    }
+    if (exstyle & WS_EX_STATICEDGE) {
+        TRACE("     WS_EX_STATICEDGE\n");
+    }
+    if (exstyle & WS_EX_TOOLWINDOW) {
+        TRACE("     WS_EX_TOOLWINDOW\n");
+    }
+    if (exstyle & WS_EX_TOPMOST) {
+        TRACE("     WS_EX_TOPMOST\n");
+    }
+    if (exstyle & WS_EX_TRANSPARENT) {
+        TRACE("     WS_EX_TRANSPARENT\n");
+    }
+    if (exstyle & WS_EX_WINDOWEDGE) {
+        TRACE("     WS_EX_WINDOWEDGE\n");
+    }
+#endif
 }
 
 void dbg_dump_swp_flags(DWORD flags)
@@ -816,6 +1089,111 @@ void dbg_dump_dds_lock_flags(DWORD flags)
         TRACE("     DDLOCK_NODIRTYUPDATE\n");
     }
 #endif
+}
+
+void dbg_dump_di_scm_flags(DWORD flags)
+{
+#ifdef _DEBUG
+    if (flags & DISCL_EXCLUSIVE) {
+        TRACE("     DISCL_EXCLUSIVE\n");
+    }
+    if (flags & DISCL_NONEXCLUSIVE) {
+        TRACE("     DISCL_NONEXCLUSIVE\n");
+    }
+    if (flags & DISCL_FOREGROUND) {
+        TRACE("     DISCL_FOREGROUND\n");
+    }
+    if (flags & DISCL_BACKGROUND) {
+        TRACE("     DISCL_BACKGROUND\n");
+    }
+    if (flags & DISCL_NOWINKEY) {
+        TRACE("     DISCL_NOWINKEY\n");
+    }
+#endif
+}
+
+void dbg_dump_hook_type(int idHook)
+{
+#ifdef _DEBUG
+    if (idHook == 0) {
+        TRACE("     WH_JOURNALRECORD\n");
+    }
+    if (idHook == 1) {
+        TRACE("     WH_JOURNALPLAYBACK\n");
+    }
+    if (idHook == 2) {
+        TRACE("     WH_KEYBOARD\n");
+    }
+    if (idHook == 3) {
+        TRACE("     WH_GETMESSAGE\n");
+    }
+    if (idHook == 4) {
+        TRACE("     WH_CALLWNDPROC\n");
+    }
+    if (idHook == 5) {
+        TRACE("     WH_CBT\n");
+    }
+    if (idHook == 6) {
+        TRACE("     WH_SYSMSGFILTER\n");
+    }
+    if (idHook == 7) {
+        TRACE("     WH_MOUSE\n");
+    }
+    if (idHook == 9) {
+        TRACE("     WH_DEBUG\n");
+    }
+    if (idHook == 10) {
+        TRACE("     WH_SHELL\n");
+    }
+    if (idHook == 11) {
+        TRACE("     WH_FOREGROUNDIDLE\n");
+    }
+    if (idHook == 12) {
+        TRACE("     WH_CALLWNDPROCRET\n");
+    }
+    if (idHook == 13) {
+        TRACE("     WH_KEYBOARD_LL\n");
+    }
+    if (idHook == 14) {
+        TRACE("     WH_MOUSE_LL\n");
+    }
+    if (idHook == -1) {
+        TRACE("     WH_MSGFILTER\n");
+    }
+#endif
+}
+
+char* dbg_d3d9_hr_to_str(HRESULT hr)
+{
+#define HR_TO_STR(x) if (x == hr) return #x
+
+    HR_TO_STR(D3D_OK);
+
+    HR_TO_STR(D3DERR_WRONGTEXTUREFORMAT);
+    HR_TO_STR(D3DERR_UNSUPPORTEDCOLOROPERATION);
+    HR_TO_STR(D3DERR_UNSUPPORTEDCOLORARG);
+    HR_TO_STR(D3DERR_UNSUPPORTEDALPHAOPERATION);
+    HR_TO_STR(D3DERR_UNSUPPORTEDALPHAARG);
+    HR_TO_STR(D3DERR_TOOMANYOPERATIONS);
+    HR_TO_STR(D3DERR_CONFLICTINGTEXTUREFILTER);
+    HR_TO_STR(D3DERR_UNSUPPORTEDFACTORVALUE);
+    HR_TO_STR(D3DERR_CONFLICTINGRENDERSTATE);
+    HR_TO_STR(D3DERR_UNSUPPORTEDTEXTUREFILTER);
+    HR_TO_STR(D3DERR_CONFLICTINGTEXTUREPALETTE);
+    HR_TO_STR(D3DERR_DRIVERINTERNALERROR);
+
+    HR_TO_STR(D3DERR_NOTFOUND);
+    HR_TO_STR(D3DERR_MOREDATA);
+    HR_TO_STR(D3DERR_DEVICELOST);
+    HR_TO_STR(D3DERR_DEVICENOTRESET);
+    HR_TO_STR(D3DERR_NOTAVAILABLE);
+    HR_TO_STR(D3DERR_OUTOFVIDEOMEMORY);
+    HR_TO_STR(D3DERR_INVALIDDEVICE);
+    HR_TO_STR(D3DERR_INVALIDCALL);
+    HR_TO_STR(D3DERR_DRIVERINVALIDCALL);
+    HR_TO_STR(D3DERR_WASSTILLDRAWING);
+
+    return "UNKNOWN";
 }
 
 char* dbg_mes_to_str(int id)
