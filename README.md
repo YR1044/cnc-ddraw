@@ -201,6 +201,7 @@ Wine (Linux/macOS/Android) only: override `ddraw` in [winecfg](https://wiki.wine
 - Full Throttle
 - Future Cop L.A.P.D
 - G-Police
+- Gateway (Remake)
 - Geneforge
 - Gilbert Goodmate And The Mushroom Of Phungoria
 - Gorasul: The Legacy of the Dragon
