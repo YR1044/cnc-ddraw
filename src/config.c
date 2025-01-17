@@ -535,7 +535,7 @@ static void cfg_create_ini()
             "; Atlantis\n"
             "[ATLANTIS]\n"
             "renderer=opengl\n"
-            "maxgameticks=60\n"
+            "maxgameticks=30\n"
             "center_cursor_fix=true\n"
             "\n"
             "; Airline Tycoon Deluxe\n"
