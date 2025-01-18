@@ -9,7 +9,6 @@
 #include <SysUtils.hpp>
 #include <Registry.hpp>
 #include <System.Hash.hpp>
-#include <VersionHelpers.h>
 #include "ConfigFormUnit.h"
 //---------------------------------------------------------------------------
 #pragma package(smart_init)
@@ -1286,11 +1285,6 @@ void __fastcall TConfigForm::FormCreate(TObject *Sender)
 
 	delete ini;
 
-	VsyncChk->Enabled = VsyncAllowed();
-	if (!VsyncChk->Enabled) {
-		VsyncChk->State = tssOff;
-	}
-
 	Initialized = true;
 }
 
@@ -1712,31 +1706,8 @@ bool TConfigForm::GetBool(TIniFile *ini, System::UnicodeString key, bool defValu
 	return s == "true" || s == "yes" || s == "1";
 }
 
-bool TConfigForm::VsyncAllowed()
-{
-	if (GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wine_get_version")) {
-		return true;
-	}
-
-	if (!IsWindows8OrGreater()) {
-		return true;
-	}
-
-	if (NonexclusiveChk->State == tssOff &&
-		(PresentationCbx->ItemIndex == 0 || PresentationCbx->ItemIndex == 1)) {
-		return true;
-	}
-
-   return false;
-}
-
 void __fastcall TConfigForm::PresentationCbxChange(TObject *Sender)
 {
-	VsyncChk->Enabled = VsyncAllowed();
-	if (!VsyncChk->Enabled) {
-		VsyncChk->State = tssOff;
-	}
-
 	SaveSettings();
 }
 
@@ -1845,11 +1816,6 @@ void __fastcall TConfigForm::SinglecpuChkClick(TObject *Sender)
 
 void __fastcall TConfigForm::NonexclusiveChkClick(TObject *Sender)
 {
-	VsyncChk->Enabled = VsyncAllowed();
-	if (!VsyncChk->Enabled) {
-		VsyncChk->State = tssOff;
-	}
-
 	SaveSettings();
 }
 

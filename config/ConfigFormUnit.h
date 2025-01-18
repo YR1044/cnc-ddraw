@@ -118,7 +118,6 @@ private:	// Benutzer-Deklarationen
 	virtual void __fastcall CreateParams(TCreateParams & Params);
 	void SaveSettings();
 	bool GetBool(TIniFile *ini, System::UnicodeString key, bool defValue);
-	bool VsyncAllowed();
 	void ApplyTranslation(TIniFile *ini);
 	System::UnicodeString GetKeyText(WORD key);
 	WORD GetKeyCode(System::UnicodeString text);
