@@ -70,6 +70,7 @@ Wine (Linux/macOS/Android) only: override `ddraw` in [winecfg](https://wiki.wine
 - Another War
 - Anstoss 3
 - Arcanum: Of Steamworks and Magick Obscura
+- Arcatera the Dark Brotherhood
 - Army Men 2
 - Army Men: Air Tactics
 - Army Men: Toys in Space
@@ -146,6 +147,7 @@ Wine (Linux/macOS/Android) only: override `ddraw` in [winecfg](https://wiki.wine
 - Cloud Kingdom 3 (only with /ddraw command line parameter)
 - Dark Earth
 - Dark Reign: The Future of War
+- Dark Secret of Africa
 - Day Of The Tentacle
 - Daytona
 - Daytona USA (Sega - 1996)
@@ -422,6 +424,7 @@ Wine (Linux/macOS/Android) only: override `ddraw` in [winecfg](https://wiki.wine
 - Sudden Strike 2
 - Superbike 2000
 - Swarog
+- The Jungle Book Groove Party
 - The Curse Of Monkey Island
 - The Dig
 - The Last Express
