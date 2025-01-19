@@ -1553,7 +1553,7 @@ HRESULT dd_CreateSurface(
             if (dst_surface->hdc)
                 InterlockedIncrement(&g_dds_gdi_handles);
 
-            DWORD map_offset = dst_surface->pitch * g_config.guard_lines;
+            DWORD map_offset = 65280; // CreateDIBSection cannot handle values higher than a WORD - 0xFF00 (guard lines);
 
             dst_surface->mapping =
                 CreateFileMappingA(
