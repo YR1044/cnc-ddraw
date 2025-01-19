@@ -4,6 +4,9 @@
 #include "debug.h"
 #include "hook.h"
 #include "config.h"
+#include "render_ogl.h"
+#include "versionhelpers.h"
+
 
 FPSLIMITER g_fpsl;
 
@@ -14,8 +17,8 @@ void fpsl_init()
     g_fpsl.tick_length_ns = 0;
     g_fpsl.tick_length = 0;
 
-    if (max_fps < 0 || (g_config.vsync && (!g_config.maxfps || g_config.maxfps >= g_ddraw->mode.dmDisplayFrequency)))
-        max_fps = g_ddraw->mode.dmDisplayFrequency;
+    if (max_fps < 0 || (g_config.vsync && (!g_config.maxfps || g_config.maxfps >= g_ddraw.mode.dmDisplayFrequency)))
+        max_fps = g_ddraw.mode.dmDisplayFrequency;
 
     if (max_fps > 1000)
         max_fps = 0;
@@ -88,13 +91,13 @@ BOOL fpsl_wait_for_vblank()
 {
     if (g_fpsl.initialized)
     {
-        if (!g_fpsl.got_adapter && g_fpsl.D3DKMTOpenAdapterFromHdc && g_ddraw->render.hdc)
+        if (!g_fpsl.got_adapter && g_fpsl.D3DKMTOpenAdapterFromHdc && g_ddraw.render.hdc)
         {
             EnterCriticalSection(&g_fpsl.cs);
 
             if (!g_fpsl.got_adapter)
             {
-                g_fpsl.adapter.hDc = g_ddraw->render.hdc;
+                g_fpsl.adapter.hDc = g_ddraw.render.hdc;
 
                 if (g_fpsl.D3DKMTOpenAdapterFromHdc(&g_fpsl.adapter) == 0)
                 {
@@ -117,16 +120,9 @@ BOOL fpsl_wait_for_vblank()
 
 BOOL fpsl_dwm_flush()
 {
-    if (g_fpsl.initialized && fpsl_dwm_is_enabled() && g_fpsl.DwmFlush)
+    if (g_fpsl.initialized && fpsl_dwm_is_enabled() && g_fpsl.DwmFlush && !IsWine())
     {
-        HRESULT x = g_fpsl.DwmFlush();
-
-        if (!SUCCEEDED(x))
-        {
-            //TRACE(" ERROR %s(result=%08X)\n", __FUNCTION__, x);
-        }
-
-        return SUCCEEDED(x);
+        return SUCCEEDED(g_fpsl.DwmFlush());
     }
 
     return FALSE;
@@ -151,17 +147,26 @@ void fpsl_frame_start()
 void fpsl_frame_end()
 {
     if (g_config.maxfps < 0 || 
-        (g_config.vsync && (!g_config.maxfps || g_config.maxfps >= g_ddraw->mode.dmDisplayFrequency)))
+        (g_config.vsync && (!g_config.maxfps || g_config.maxfps >= g_ddraw.mode.dmDisplayFrequency)))
     {
-        if (fpsl_dwm_flush() || fpsl_wait_for_vblank())
-            return;
+        /* Workaround for DwmFlush() freeze (e.g. slow alt+tab) issue on windows 7 SP1 */
+        if (g_ddraw.renderer == ogl_render_main && !IsWine() && !IsWindows8OrGreater())
+        {
+            if (fpsl_wait_for_vblank())
+                return;
+        }
+        else
+        {
+            if (fpsl_dwm_flush() || fpsl_wait_for_vblank())
+                return;
+        }
     }
 
     if (g_fpsl.tick_length > 0)
     {
         if (g_fpsl.htimer)
         {
-            if (g_config.vsync && (!g_config.maxfps || g_config.maxfps >= g_ddraw->mode.dmDisplayFrequency))
+            if (g_config.vsync && (!g_config.maxfps || g_config.maxfps >= g_ddraw.mode.dmDisplayFrequency))
             {
                 WaitForSingleObject(g_fpsl.htimer, g_fpsl.tick_length * 2);
                 LARGE_INTEGER due_time = { .QuadPart = -g_fpsl.tick_length_ns };

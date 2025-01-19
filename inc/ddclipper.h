@@ -12,6 +12,7 @@ HRESULT ddc_GetHWnd(IDirectDrawClipperImpl* This, HWND FAR* lphWnd);
 HRESULT ddc_IsClipListChanged(IDirectDrawClipperImpl* This, BOOL FAR* lpbChanged);
 HRESULT ddc_SetClipList(IDirectDrawClipperImpl* This, LPRGNDATA lpClipList, DWORD dwFlags);
 HRESULT ddc_SetHWnd(IDirectDrawClipperImpl* This, DWORD dwFlags, HWND hWnd);
+HRESULT ddc_SetClipRect(IDirectDrawClipperImpl* This, LPRECT lpRect);
 HRESULT dd_CreateClipper(DWORD dwFlags, IDirectDrawClipperImpl** lplpDDClipper, IUnknown FAR* pUnkOuter);
 
 #endif

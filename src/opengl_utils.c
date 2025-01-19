@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "hook.h"
 #include "config.h"
+#include "versionhelpers.h"
 
 PFNWGLCREATECONTEXTPROC xwglCreateContext;
 PFNWGLDELETECONTEXTPROC xwglDeleteContext;
@@ -87,11 +88,14 @@ PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
 PFNWGLGETEXTENSIONSSTRINGARBPROC wglGetExtensionsStringARB;
 PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
 PFNGLTEXBUFFERPROC glTexBuffer;
+PFNGLGETINTEGERVPROC glGetIntegerv;
+PFNGLGETSTRINGIPROC glGetStringi;
 
 HMODULE g_oglu_hmodule;
 BOOL g_oglu_got_version2;
 BOOL g_oglu_got_version3;
 char g_oglu_version[128];
+char g_oglu_version_long[128];
 
 BOOL oglu_load_dll()
 {
@@ -191,13 +195,16 @@ void oglu_init()
     wglGetExtensionsStringARB = (PFNWGLGETEXTENSIONSSTRINGARBPROC)xwglGetProcAddress("wglGetExtensionsStringARB");
 
     glTexBuffer = (PFNGLTEXBUFFERPROC)xwglGetProcAddress("glTexBuffer");
+    glGetIntegerv = (PFNGLGETINTEGERVPROC)xwglGetProcAddress("glGetIntegerv");
+    glGetStringi = (PFNGLGETSTRINGIPROC)xwglGetProcAddress("glGetStringi");
 
     char* glversion = (char*)glGetString(GL_VERSION);
     if (glversion)
     {
         strncpy(g_oglu_version, glversion, sizeof(g_oglu_version) - 1);
-        const char deli[2] = " ";
-        strtok(g_oglu_version, deli);
+        strncpy(g_oglu_version_long, glversion, sizeof(g_oglu_version_long) - 1);
+        g_oglu_version[sizeof(g_oglu_version) - 1] = '\0'; /* strncpy fix */
+        strtok(g_oglu_version, " ");
     }
     else
     {
@@ -212,13 +219,13 @@ void oglu_init()
         glEnableVertexAttribArray && glUniform2fv && glUniformMatrix4fv && glGenVertexArrays && glBindVertexArray &&
         glGetUniformLocation;
 
-    if (g_config.is_wine && glversion && glversion[0] == '2') // macOS
+    if (IsWine() && glversion && glversion[0] == '2') // macOS
     {
         g_oglu_got_version3 = FALSE;
         wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)xwglGetProcAddress("wglCreateContextAttribsARB");
     }
 
-    if (g_ddraw->opengl_core)
+    if (g_config.opengl_core)
     {
         wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)xwglGetProcAddress("wglCreateContextAttribsARB");
     }
@@ -226,11 +233,32 @@ void oglu_init()
 
 BOOL oglu_ext_exists(char* ext, HDC hdc)
 {
-    char* glext = (char*)glGetString(GL_EXTENSIONS);
+    BOOL got_num_extensions = FALSE;
 
-    if (glext)
+    if (glGetIntegerv && glGetStringi)
     {
-        if (strstr(glext, ext))
+        GLint n = 0;
+        glGetIntegerv(GL_NUM_EXTENSIONS, &n);
+
+        if (glGetError() == GL_NO_ERROR)
+        {
+            got_num_extensions = TRUE;
+
+            for (GLint i = 0; i < n; i++)
+            {
+                char* glext = (char*)glGetStringi(GL_EXTENSIONS, i);
+
+                if (glext && strcmp(glext, ext) == 0)
+                    return TRUE;
+            }
+        }
+    }
+
+    if (!got_num_extensions)
+    {
+        char* glext = (char*)glGetString(GL_EXTENSIONS);
+
+        if (glext && strstr(glext, ext))
             return TRUE;
     }
 

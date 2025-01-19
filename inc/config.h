@@ -18,14 +18,17 @@ typedef struct CNCDDRAWCONFIG
     char dll_file_name[MAX_PATH];
     char process_file_ext[MAX_PATH];
     char dll_file_ext[MAX_PATH];
+    char game_section[MAX_PATH];
     INIFILE ini;
-    BOOL is_wine;
-    
+    BOOL d3d9on12;
+    BOOL opengl_core;
+
     /* Optional settings */
 
     BOOL fullscreen;
     BOOL windowed;
     BOOL maintas;
+    char aspect_ratio[16];
     BOOL boxing;
     int maxfps;
     BOOL vsync;
@@ -37,6 +40,10 @@ typedef struct CNCDDRAWCONFIG
     int save_settings;
     BOOL resizable;
     int d3d9_filter;
+    int anti_aliased_fonts_min_size;
+    int min_font_size;
+    int center_window;
+    char inject_resolution[128];
     BOOL vhack;
     char screenshot_dir[MAX_PATH];
     BOOL toggle_borderless;
@@ -46,41 +53,43 @@ typedef struct CNCDDRAWCONFIG
 
     BOOL noactivateapp;
     int maxgameticks;
+    int limiter_type;
     int minfps;
     BOOL nonexclusive;
     BOOL singlecpu;
     int resolutions;
     int fixchilds;
     BOOL hook_peekmessage;
-    BOOL hook_getmessage;
 
     /* Undocumented settings */
 
-    BOOL releasealt;
-    BOOL fixnotresponding;
-    int hook;
+    BOOL fix_alt_key_stuck;
+    BOOL fix_not_responding;
+    BOOL no_compat_warning;
     int guard_lines;
     int max_resolutions;
-    BOOL limit_bltfast;
     BOOL lock_surfaces;
-    BOOL allow_wmactivate;
     BOOL flipclear;
-    BOOL fixmousehook;
     BOOL rgb555;
     BOOL no_dinput_hook;
+    BOOL center_cursor_fix;
+    char fake_mode[128];
+    BOOL lock_mouse_top_left;
+    char win_version[32];
+    int hook;
+    BOOL limit_gdi_handles;
+    BOOL remove_menu;
     int refresh_rate;
-    int anti_aliased_fonts_min_size;
-    int custom_width;
-    int custom_height;
-    int min_font_size;
-    BOOL direct3d_passthrough;
+    int terminate_process;
 
     /* Hotkeys */
 
     struct
     {
         int toggle_fullscreen;
+        int toggle_fullscreen2;
         int toggle_maximize;
+        int toggle_maximize2;
         int unlock_cursor1;
         int unlock_cursor2;
         int screenshot;
@@ -88,14 +97,16 @@ typedef struct CNCDDRAWCONFIG
 
     /* Game specific settings */
 
-    BOOL remove_menu;
-    
     BOOL armadahack;
     BOOL tshack;
     BOOL infantryhack;
     BOOL stronghold_hack;
     BOOL mgs_hack;
-    BOOL vermeer_hack;
+    BOOL tlc_hack;
+    BOOL carma95_hack;
+    BOOL sirtech_hack;
+    BOOL flightsim98_hack;
+    BOOL darkcolony_hack;
 
 } CNCDDRAWCONFIG;
 
