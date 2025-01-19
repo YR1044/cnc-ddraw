@@ -1553,16 +1553,16 @@ HRESULT dd_CreateSurface(
             if (dst_surface->hdc)
                 InterlockedIncrement(&g_dds_gdi_handles);
 
+            DWORD map_offset = dst_surface->pitch * g_config.guard_lines;
+
             dst_surface->mapping =
                 CreateFileMappingA(
                     INVALID_HANDLE_VALUE,
                     NULL,
                     PAGE_READWRITE | SEC_COMMIT,
                     0,
-                    bmp_size + 256,
+                    bmp_size + 256 + map_offset,
                     NULL);
-
-            DWORD map_offset = 0;
 
             if (dst_surface->mapping)
             {
